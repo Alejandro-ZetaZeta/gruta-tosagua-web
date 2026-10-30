@@ -1,0 +1,97 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import SlotBars from '../../components/SlotBars.astro';
+import { getSettings } from '../../lib/settings';
+import { getTodaySlotGroups, groupSlots } from '../../lib/services/stats';
+import { getDaySlots } from '../../lib/services/scheduler';
+import { addDaysKey, formatTime, localDateKey } from '../../lib/time';
+import { SLOT_STATUS_META } from '../../lib/types';
+
+const adminEmail = Astro.locals.adminEmail ?? '';
+const settings = await getSettings();
+const today = await getTodaySlotGroups(settings);
+const tomorrowKey = addDaysKey(localDateKey(new Date(), settings.utc_offset_min), 1);
+const tomorrowSlots = await getDaySlots(tomorrowKey, settings);
+const tomorrow = groupSlots(tomorrowSlots, settings, new Date(), false);
+
+function slotPill(status: keyof typeof SLOT_STATUS_META): string {
+  if (status === 'PLAYED') return 'ok';
+  if (status === 'FAILED') return 'danger';
+  if (status === 'SKIPPED') return 'warn';
+  return 'gold';
+}
+---
+
+<AdminLayout title="Tandas de hoy" active="slots" adminEmail={adminEmail}>
+  <div class="page-title">
+    <span class="eyebrow">Programación</span>
+    <h1>Tandas de hoy</h1>
+    <p class="muted">
+      Cada tanda dura como máximo {settings.max_slot_seconds} segundos. El reproductor descarga los audios antes de
+      emitirlos.
+    </p>
+  </div>
+
+  {settings.is_paused && (
+    <div class="alert danger">
+      <i class="ph ph-speaker-slash" aria-hidden="true"></i>
+      <span>Las emisiones están en pausa. Nada sonará hasta que la desactive en “Por revisar”.</span>
+    </div>
+  )}
+
+  <div class="card pad stack">
+    <div class="adm-head">
+      <h2 style="font-size:1.5rem">Hoy</h2>
+      <span class="muted">{today.groups.length} {today.groups.length === 1 ? 'tanda' : 'tandas'}</span>
+    </div>
+    <SlotBars groups={today.groups} maxSeconds={settings.max_slot_seconds} />
+  </div>
+
+  <div class="card pad stack">
+    <div class="adm-head">
+      <h3>Detalle por anuncio</h3>
+      <span class="muted">Se actualiza con la confirmación del reproductor</span>
+    </div>
+
+    {today.slots.length === 0 ? (
+      <p class="empty">Todavía no hay tandas programadas para hoy.</p>
+    ) : (
+      <div class="records">
+        {today.slots.map((slot) => (
+          <div class="record">
+            <div class="grow">
+              <b>{formatTime(slot.slot_time, settings.utc_offset_min)} · {slot.order_code}</b>
+              <div class="sub">
+                {slot.client_name} · {slot.duration_sec} s · {SLOT_STATUS_META[slot.status].label}
+              </div>
+            </div>
+            <span class={`pill ${slotPill(slot.status)}`}>
+              <i class={`ph ph-${SLOT_STATUS_META[slot.status].icon}`} aria-hidden="true"></i>
+              {SLOT_STATUS_META[slot.status].label}
+            </span>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+
+  {tomorrow.length > 0 && (
+    <div class="card pad stack">
+      <div class="adm-head">
+        <h3>Mañana</h3>
+        <span class="muted">{tomorrow.length} {tomorrow.length === 1 ? 'tanda' : 'tandas'}</span>
+      </div>
+      <p class="read-time">Solo aparecen las tandas que ya están programadas.</p>
+      <SlotBars groups={tomorrow} maxSeconds={settings.max_slot_seconds} />
+    </div>
+  )}
+
+  <div class="row">
+    <a class="btn btn-ghost btn-sm" href="/panel">
+      <i class="ph ph-tray" aria-hidden="true"></i> Volver a revisar
+    </a>
+    <a class="btn btn-ghost btn-sm" href="/panel/cierre">
+      <i class="ph ph-list-checks" aria-hidden="true"></i> Ir al cierre del día
+    </a>
+  </div>
+</AdminLayout>

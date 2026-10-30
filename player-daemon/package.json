@@ -1,0 +1,14 @@
+{
+  "name": "gruta-player-daemon",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Reproductor local offline-first de La Gruta",
+  "engines": {
+    "node": ">=22.9"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/index.ts",
+    "dev": "node --env-file-if-exists=.env --watch src/index.ts"
+  }
+}

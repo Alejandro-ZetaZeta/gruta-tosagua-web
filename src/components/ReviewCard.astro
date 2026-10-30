@@ -1,0 +1,250 @@
+---
+import { actions } from 'astro:actions';
+import { CATEGORY_META, VOICES, VOICE_META } from '../lib/types';
+import type { ReviewItem } from '../lib/services/orders';
+import { validationRows } from '../lib/services/payments';
+import { estimateSeconds, formatDateLong, formatMoney } from '../lib/time';
+
+interface Props {
+  item: ReviewItem;
+  receiptUrl: string | null;
+}
+
+const { item, receiptUrl } = Astro.props;
+const { payment } = item;
+const category = CATEGORY_META[item.category];
+const flags = payment?.validation_flags ?? {};
+const rows = validationRows(flags);
+const extracted = payment?.extracted_data ?? {};
+const isPdf = payment?.receipt_key?.toLowerCase().endsWith('.pdf') ?? false;
+const estimate = estimateSeconds(item.final_script ?? item.raw_idea);
+const scriptId = `script-${item.id}`;
+const formId = `approve-${item.id}`;
+---
+
+<article class="card pad review" data-review data-order-id={item.id} aria-labelledby="review-title">
+  <div class="review-top">
+    <div>
+      <span class="eyebrow">{item.order_code} · {category.label}</span>
+      <h2 id="review-title">{item.client_name} · {item.client_phone}</h2>
+    </div>
+    <div class="meta">
+      {item.is_urgent && (
+        <span class="pill danger"><i class="ph ph-lightning" aria-hidden="true"></i> Urgente</span>
+      )}
+      <span class="pill"><i class="ph ph-calendar-blank" aria-hidden="true"></i> {formatDateLong(item.target_date)}</span>
+      <span class="pill gold">
+        <i class="ph ph-megaphone" aria-hidden="true"></i>
+        {item.total_emissions} {item.total_emissions === 1 ? 'vez' : 'veces'}
+      </span>
+    </div>
+  </div>
+
+  {item.photo_requested_at && (
+    <div class="alert warn">
+      <i class="ph ph-camera" aria-hidden="true"></i>
+      <div>
+        <b>Ya se pidió otra foto.</b>
+        <div class="read-time">El cliente puede subir un comprobante nuevo desde “Consultar pedido”.</div>
+      </div>
+    </div>
+  )}
+
+  <div class="receipt">
+    <div>
+      {receiptUrl && !isPdf ? (
+        <button type="button" class="receipt-img" data-receipt-open aria-label="Ampliar comprobante">
+          <img src={receiptUrl} alt={`Comprobante de ${item.client_name}`} loading="lazy" />
+        </button>
+      ) : receiptUrl && isPdf ? (
+        <a
+          class="receipt-img pdf"
+          href={receiptUrl}
+          target="_blank"
+          rel="noopener"
+          aria-label="Abrir comprobante en PDF"
+        >
+          <span><i class="ph ph-file-pdf" aria-hidden="true"></i><br />Abrir PDF</span>
+        </a>
+      ) : (
+        <div class="receipt-img">
+          <span><i class="ph ph-image" aria-hidden="true"></i><br />Sin comprobante</span>
+        </div>
+      )}
+      {receiptUrl && <p class="read-time" style="margin-top:8px;text-align:center">Toque la imagen para ampliar.</p>}
+    </div>
+
+    <div class="stack">
+      <dl class="bank">
+        <div><dt>Monto</dt><dd>{extracted.monto != null ? formatMoney(Number(extracted.monto)) : '—'}</dd></div>
+        <div><dt>Banco</dt><dd>{extracted.banco ?? '—'}</dd></div>
+        <div><dt>N.º comprobante</dt><dd>{extracted.numero_comprobante ?? flags.reference_value ?? '—'}</dd></div>
+      </dl>
+
+      {!payment ? (
+        <div class="alert warn">
+          <i class="ph ph-warning" aria-hidden="true"></i>
+          <span>Aún no hay comprobante. El cliente puede subirlo desde “Consultar pedido”.</span>
+        </div>
+      ) : (
+        <ul class="flags">
+          {rows.map((row) => (
+            <li class={row.state}>
+              <i class={`ph ph-${row.icon}`} aria-hidden="true"></i> {row.label}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {flags.manual_review && payment && (
+        <div class="note gold">
+          <i class="ph ph-eye" aria-hidden="true"></i>
+          <p>
+            <b>Lectura manual requerida.</b> La IA no aprobó nada: revise la foto y los datos antes de decidir.
+          </p>
+        </div>
+      )}
+    </div>
+  </div>
+
+  <details>
+    <summary style="cursor:pointer;font-weight:700">Ver lo que escribió el cliente</summary>
+    <p class="muted" style="margin-top:8px">{item.raw_idea}</p>
+  </details>
+
+  <form id={formId} method="POST" action={actions.adminApprove} class="stack">
+    <input type="hidden" name="orderId" value={item.id} />
+    <div class="field">
+      <label for={scriptId}>Texto que leerá la voz <span class="muted">(puede editarlo)</span></label>
+      <textarea id={scriptId} name="script" data-script maxlength="1800">{item.final_script ?? item.raw_idea}</textarea>
+      <span class="hint" data-duration>≈ {estimate} segundos (máximo 110)</span>
+    </div>
+
+    <div class="field">
+      <span class="label">Tono de voz</span>
+      <div class="voices">
+        {VOICES.map((voice) => (
+          <label class="voice">
+            <input type="radio" name="voice" value={voice} checked={item.voice_profile === voice} data-voice />
+            <span>
+              <i class={`ph ph-${VOICE_META[voice].icon}`} aria-hidden="true"></i>
+              {VOICE_META[voice].label}
+            </span>
+          </label>
+        ))}
+      </div>
+    </div>
+  </form>
+
+  <div class="row">
+    <button type="button" class="btn btn-ghost btn-sm" data-preview>
+      <i class="ph ph-play" aria-hidden="true"></i> Escuchar
+    </button>
+    <audio controls hidden data-audio preload="none"></audio>
+    <span class="hint" data-preview-status aria-live="polite"></span>
+  </div>
+
+  <div class="review-actions">
+    <button class="btn btn-primary" type="submit" form={formId} data-approve>
+      <i class="ph ph-check" aria-hidden="true"></i> Aprobar y programar
+    </button>
+
+    <form method="POST" action={actions.adminRequestPhoto}>
+      <input type="hidden" name="orderId" value={item.id} />
+      <button class="btn btn-ghost" type="submit">
+        <i class="ph ph-camera" aria-hidden="true"></i> Pedir otra foto
+      </button>
+    </form>
+
+    <form
+      method="POST"
+      action={actions.adminReject}
+      data-confirm="¿Rechazar este pedido y bloquear el teléfono del cliente? Esta acción no se puede deshacer desde el panel."
+    >
+      <input type="hidden" name="orderId" value={item.id} />
+      <input type="hidden" name="blockPhone" value="on" />
+      <button class="btn btn-danger" type="submit">
+        <i class="ph ph-prohibit" aria-hidden="true"></i> Comprobante falso · bloquear
+      </button>
+    </form>
+  </div>
+</article>
+
+<dialog id="receipt-dialog" aria-label="Comprobante ampliado">
+  <button type="button" class="dialog-close" data-receipt-close aria-label="Cerrar">
+    <i class="ph ph-x" aria-hidden="true"></i>
+  </button>
+  {receiptUrl && !isPdf && <img src={receiptUrl} alt={`Comprobante de ${item.client_name}`} />}
+</dialog>
+
+<script>
+  import { actions } from 'astro:actions';
+
+  const root = document.querySelector<HTMLElement>('[data-review]');
+  if (root) {
+    const orderId = root.dataset.orderId ?? '';
+    const textarea = root.querySelector<HTMLTextAreaElement>('[data-script]');
+    const duration = root.querySelector<HTMLElement>('[data-duration]');
+    const audio = root.querySelector<HTMLAudioElement>('[data-audio]');
+    const preview = root.querySelector<HTMLButtonElement>('[data-preview]');
+    const status = root.querySelector<HTMLElement>('[data-preview-status]');
+    const approve = root.querySelector<HTMLButtonElement>('[data-approve]');
+    const form = document.getElementById(`approve-${orderId}`) as HTMLFormElement | null;
+
+    const secondsFor = (text: string) => Math.max(1, Math.ceil(text.trim().split(/\s+/).filter(Boolean).length / 2.5));
+    const currentVoice = () =>
+      root.querySelector<HTMLInputElement>('[data-voice]:checked')?.value ?? 'NEUTRAL';
+
+    const updateDuration = () => {
+      if (!textarea || !duration) return;
+      const seconds = secondsFor(textarea.value);
+      duration.textContent =
+        seconds > 110
+          ? `≈ ${seconds} segundos. Es demasiado largo: acórtelo a 110 segundos o menos.`
+          : `≈ ${seconds} segundos (máximo 110)`;
+      duration.style.color = seconds > 110 ? 'var(--color-danger)' : '';
+    };
+    textarea?.addEventListener('input', updateDuration);
+    updateDuration();
+
+    preview?.addEventListener('click', async () => {
+      if (!textarea || !audio) return;
+      preview.disabled = true;
+      if (status) status.textContent = 'Generando audio…';
+      const { data, error } = await actions.adminPreviewAudio({
+        orderId,
+        script: textarea.value,
+        voice: currentVoice() as 'SOLEMN' | 'CHEERFUL' | 'NEUTRAL',
+      });
+      preview.disabled = false;
+      if (error || !data) {
+        if (status) status.textContent = error?.message ?? 'No pudimos generar el audio.';
+        return;
+      }
+      audio.src = data.url;
+      audio.hidden = false;
+      if (status) status.textContent = `${data.duration} segundos. Esta es una muestra del tono.`;
+      await audio.play().catch(() => undefined);
+    });
+
+    form?.addEventListener('submit', () => {
+      if (approve) {
+        approve.disabled = true;
+        approve.textContent = 'Generando audio y programando…';
+      }
+    });
+
+    const dialog = document.getElementById('receipt-dialog') as HTMLDialogElement | null;
+    root.querySelector('[data-receipt-open]')?.addEventListener('click', () => dialog?.showModal());
+    document.querySelector('[data-receipt-close]')?.addEventListener('click', () => dialog?.close());
+    dialog?.addEventListener('click', (event) => {
+      if (event.target === dialog) dialog.close();
+    });
+  }
+
+  document.querySelectorAll<HTMLFormElement>('form[data-confirm]').forEach((form) => {
+    form.addEventListener('submit', (event) => {
+      if (!window.confirm(form.dataset.confirm ?? '¿Continuar?')) event.preventDefault();
+    });
+  });
+</script>

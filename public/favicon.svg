@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="La Gruta">
+  <rect width="64" height="64" rx="32" fill="#3B1F7A"/>
+  <path d="M32 14v8M28 18h8" stroke="#FEF3C7" stroke-width="3" stroke-linecap="round"/>
+  <path d="M20 50V32l12-8 12 8v18" fill="none" stroke="#FEF3C7" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M27 50V40a5 5 0 0 1 10 0v10" fill="#FEF3C7"/>
+</svg>

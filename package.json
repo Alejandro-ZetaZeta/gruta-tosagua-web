@@ -1,0 +1,29 @@
+{
+  "name": "la-gruta",
+  "type": "module",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "start": "node --env-file-if-exists=.env.local ./dist/server/entry.mjs",
+    "check": "astro check",
+    "create-admin": "node scripts/create-admin.mjs",
+    "promote-admin": "node scripts/promote-admin.mjs"
+  },
+  "dependencies": {
+    "@astrojs/node": "^11.1.9",
+    "@insforge/sdk": "^1.5.2",
+    "@phosphor-icons/web": "^2.1.2",
+    "@tailwindcss/vite": "^4.3.3",
+    "astro": "^7.4.4",
+    "msedge-tts": "^2.1.1",
+    "tailwindcss": "^4.3.3"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.4",
+    "@types/node": "^24.3.0",
+    "typescript": "^5.9.2"
+  }
+}

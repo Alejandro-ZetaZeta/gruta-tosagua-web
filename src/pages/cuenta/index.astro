@@ -1,0 +1,100 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import { getSettings } from '../../lib/settings';
+import { verifySession, sessionCookie } from '../../lib/session';
+import { getProfile } from '../../lib/profiles';
+import { getOrdersForUser } from '../../lib/services/orders';
+import { CATEGORY_META, STATUS_META } from '../../lib/types';
+import { formatDateLong, formatMoney } from '../../lib/time';
+
+const settings = await getSettings();
+const session = verifySession(Astro.cookies.get(sessionCookie.name)?.value);
+if (!session) return Astro.redirect('/cuenta/login');
+
+const profile = await getProfile(session.userId);
+if (!profile) {
+  return Astro.redirect(
+    `/cuenta/login?error=${encodeURIComponent('Su cuenta no tiene perfil. Comuníquese con la encargada.')}`,
+  );
+}
+
+const orders = await getOrdersForUser(session.userId);
+const name = profile.display_name ?? session.email;
+---
+
+<BaseLayout title="Mi cuenta">
+  <Header helpPhone={settings.help_phone} homeHref="/cuenta" />
+
+  <div class="dashboard">
+    <section class="card pad dash-head">
+      <div>
+        <span class="eyebrow">Mi cuenta</span>
+        <h1>Hola, {name}</h1>
+        <p class="muted">{session.email}{profile.phone ? ` · ${profile.phone}` : ''}</p>
+      </div>
+      <div class="row">
+        <a class="btn btn-primary" href="/cuenta/nuevo">
+          <i class="ph ph-plus" aria-hidden="true"></i> Pedir un anuncio
+        </a>
+        {profile.role === 'ADMIN' && (
+          <a class="btn btn-ghost" href="/panel">
+            <i class="ph ph-gear-six" aria-hidden="true"></i> Ir al panel
+          </a>
+        )}
+        <form method="POST" action="/api/logout">
+          <button class="btn btn-ghost" type="submit">
+            <i class="ph ph-sign-out" aria-hidden="true"></i> Cerrar sesión
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <div class="card pad stack">
+      <div class="adm-head">
+        <h2 style="font-size:1.5rem">Mis pedidos</h2>
+        <a href="/seguimiento">Consultar otro pedido</a>
+      </div>
+
+      {orders.length === 0 ? (
+        <p class="empty">
+          Todavía no pidió ningún anuncio.
+          <a href="/cuenta/nuevo">Pida el primero aquí</a>.
+        </p>
+      ) : (
+        <div class="records">
+          {orders.map((order) => (
+            <div class="record">
+              <div class="grow">
+                <b>{order.order_code} · {CATEGORY_META[order.category].short}</b>
+                <div class="sub">
+                  {formatDateLong(order.target_date)} · {order.total_emissions}{' '}
+                  {order.total_emissions === 1 ? 'vez' : 'veces'} · {formatMoney(Number(order.amount_due))}
+                </div>
+              </div>
+              <span class={`pill ${STATUS_META[order.status].pill}`}>
+                <i class={`ph ph-${STATUS_META[order.status].icon}`} aria-hidden="true"></i>
+                {STATUS_META[order.status].label}
+              </span>
+              <a class="btn btn-ghost btn-sm" href={`/seguimiento?codigo=${encodeURIComponent(order.order_code)}`}>
+                Ver
+              </a>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+
+    <div class="card pad stack">
+      <h2 style="font-size:1.35rem">Sus datos</h2>
+      <dl class="bank">
+        <div><dt>Nombre</dt><dd>{name}</dd></div>
+        <div><dt>Correo</dt><dd>{session.email}</dd></div>
+        <div><dt>Teléfono</dt><dd>{profile.phone ?? '—'}</dd></div>
+      </dl>
+      <p class="read-time">
+        Para cambiar sus datos, llame a la encargada al <a href={`tel:${settings.help_phone.replace(/[^\d+]/g, '')}`}>{settings.help_phone}</a>.
+      </p>
+    </div>
+  </div>
+</BaseLayout>

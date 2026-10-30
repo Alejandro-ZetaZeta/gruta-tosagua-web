@@ -1,0 +1,183 @@
+---
+import { actions } from 'astro:actions';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Header from '../components/Header.astro';
+import ClientTimeline from '../components/ClientTimeline.astro';
+import { getSettings } from '../lib/settings';
+import { CATEGORY_META, STATUS_META } from '../lib/types';
+import { formatDateLong, formatMoney } from '../lib/time';
+import { friendlyError } from '../lib/errors';
+
+const settings = await getSettings();
+const result = Astro.getActionResult(actions.trackOrder);
+const data = result?.data;
+const prefillCode = (Astro.url.searchParams.get('codigo') ?? '').trim();
+const queryError = Astro.url.searchParams.get('error') ?? '';
+const formError = friendlyError(result?.error);
+const order = data?.found ? data.order : null;
+const canUpload = Boolean(order && ['PENDING_PAYMENT', 'UNDER_REVIEW'].includes(order.status));
+---
+
+<BaseLayout title="Consultar mi pedido">
+  <Header helpPhone={settings.help_phone} />
+
+  <div class="narrow">
+    <div class="page-title" style="margin-bottom:20px">
+      <span class="eyebrow">Seguimiento</span>
+      <h1>Consultar mi pedido</h1>
+      <p class="muted">Escriba el código que le dimos y el teléfono con el que hizo el pedido.</p>
+    </div>
+
+    <form class="card pad stack" method="POST" action={actions.trackOrder}>
+      <div class="fields">
+        <div class="field">
+          <label for="track-code">Código del pedido</label>
+          <input
+            id="track-code"
+            name="code"
+            type="text"
+            placeholder="GRU-1234"
+            value={prefillCode}
+            autocomplete="off"
+            required
+            style="text-transform:uppercase"
+          />
+        </div>
+        <div class="field">
+          <label for="track-phone">Teléfono</label>
+          <input id="track-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" required />
+        </div>
+      </div>
+      {(queryError || formError) && (
+        <div class="alert danger">
+          <i class="ph ph-warning" aria-hidden="true"></i>
+          <span>{queryError || formError}</span>
+        </div>
+      )}
+      {data && !data.found && (
+        <div class="alert warn">
+          <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+          <span>No encontramos un pedido con ese código y teléfono. Revise los datos o llame a la encargada.</span>
+        </div>
+      )}
+      <div class="actions" style="margin-top:8px">
+        <a class="btn btn-ghost" href="/cuenta/nuevo">Pedir un anuncio</a>
+        <button class="btn btn-primary" type="submit">
+          <i class="ph ph-magnifying-glass" aria-hidden="true"></i> Consultar
+        </button>
+      </div>
+    </form>
+
+    {order && (
+      <div class="card pad" style="margin-top:20px">
+        <div class="adm-head">
+          <div>
+            <span class="eyebrow">{order.order_code} · {CATEGORY_META[order.category].label}</span>
+            <h2>{order.client_name}</h2>
+          </div>
+          <span class={`pill ${STATUS_META[order.status].pill}`}>
+            <i class={`ph ph-${STATUS_META[order.status].icon}`} aria-hidden="true"></i>
+            {STATUS_META[order.status].label}
+          </span>
+        </div>
+
+        <dl class="bank" style="margin-top:18px">
+          <div><dt>Total</dt><dd>{formatMoney(Number(order.amount_due))}</dd></div>
+          <div>
+            <dt>Emisiones</dt>
+            <dd>{order.total_emissions} {order.total_emissions === 1 ? 'vez' : 'veces'}</dd>
+          </div>
+          <div><dt>Día pedido</dt><dd>{formatDateLong(order.target_date)}</dd></div>
+        </dl>
+
+        <ClientTimeline
+          order={order}
+          hasReceipt={data?.hasReceipt ?? false}
+          slots={(data?.slots ?? [])}
+          settings={settings}
+        />
+
+        {order.photo_requested_at && (
+          <div class="alert warn" style="margin-top:16px">
+            <i class="ph ph-camera" aria-hidden="true"></i>
+            <span>La encargada pidió otra foto del comprobante. Súbala aquí abajo.</span>
+          </div>
+        )}
+
+        {canUpload && (
+          <form
+            method="POST"
+            action="/api/receipts"
+            enctype="multipart/form-data"
+            class="stack"
+            style="margin-top:20px"
+            data-reupload
+          >
+            <input type="hidden" name="orderCode" value={order.order_code} />
+            <input type="hidden" name="phone" value={order.client_phone} />
+            <div class="field">
+              <label for="new-receipt">Nueva foto o PDF del comprobante</label>
+              <input id="new-receipt" name="receipt" type="file" accept="image/*,application/pdf" required />
+            </div>
+            <div class="field">
+              <label for="new-reference">N.º de comprobante <span class="muted">(si lo tiene)</span></label>
+              <input id="new-reference" name="reference" type="text" autocomplete="off" maxlength="40" />
+            </div>
+            <p class="error" data-upload-error></p>
+            <div class="actions" style="margin-top:0">
+              <span class="read-time">También puede llamar al {settings.help_phone}.</span>
+              <button class="btn btn-primary" type="submit">Subir comprobante</button>
+            </div>
+          </form>
+        )}
+      </div>
+    )}
+
+    <p class="read-time" style="margin-top:20px;text-align:center">
+      ¿Necesita ayuda? Llame al <a href={`tel:${settings.help_phone.replace(/[^\d+]/g, '')}`}>{settings.help_phone}</a>.
+    </p>
+  </div>
+</BaseLayout>
+
+<script>
+  const form = document.querySelector<HTMLFormElement>('[data-reupload]');
+  const error = document.querySelector<HTMLElement>('[data-upload-error]');
+
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (error) error.textContent = '';
+    const button = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+    if (button) {
+      button.disabled = true;
+      button.textContent = 'Enviando…';
+    }
+    const body = new FormData(form);
+    try {
+      const response = await fetch('/api/receipts', {
+        method: 'POST',
+        body,
+        headers: { Accept: 'application/json' },
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        ok?: boolean;
+        error?: string;
+        orderCode?: string;
+      };
+      if (!response.ok || !payload.ok) {
+        if (error) error.textContent = payload.error ?? 'No pudimos recibir el comprobante.';
+        if (button) {
+          button.disabled = false;
+          button.textContent = 'Subir comprobante';
+        }
+        return;
+      }
+      window.location.href = `/gracias?codigo=${encodeURIComponent(payload.orderCode ?? '')}`;
+    } catch {
+      if (error) error.textContent = 'Se cortó la conexión. Intente de nuevo.';
+      if (button) {
+        button.disabled = false;
+        button.textContent = 'Subir comprobante';
+      }
+    }
+  });
+</script>

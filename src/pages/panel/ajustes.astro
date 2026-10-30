@@ -1,0 +1,145 @@
+---
+import { actions } from 'astro:actions';
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { getSettings } from '../../lib/settings';
+import { formatDateTime } from '../../lib/time';
+import { friendlyError } from '../../lib/errors';
+
+const adminEmail = Astro.locals.adminEmail ?? '';
+const settings = await getSettings();
+const result = Astro.getActionResult(actions.adminSaveSettings);
+---
+
+<AdminLayout title="Ajustes" active="settings" adminEmail={adminEmail}>
+  <div class="page-title">
+    <span class="eyebrow">Configuración</span>
+    <h1>Ajustes</h1>
+    <p class="muted">Horario, datos bancarios y teléfonos bloqueados. Los cambios se aplican a los pedidos nuevos.</p>
+  </div>
+
+  {result?.data?.ok && (
+    <div class="alert ok">
+      <i class="ph ph-check-circle" aria-hidden="true"></i>
+      <span>Cambios guardados.</span>
+    </div>
+  )}
+  {result?.error && (
+    <div class="alert danger">
+      <i class="ph ph-warning" aria-hidden="true"></i>
+      <span>{friendlyError(result?.error)}</span>
+    </div>
+  )}
+
+  <form method="POST" action={actions.adminSaveSettings} class="stack">
+    <div class="card pad stack">
+      <h2 style="font-size:1.35rem">Horario de emisión</h2>
+      <p class="read-time">
+        Las tandas se reparten cada {settings.slot_interval_min} minutos dentro de este horario. La hora límite es
+        cuando dejamos de aceptar pedidos para el mismo día.
+      </p>
+      <div class="fields">
+        <div class="field">
+          <label for="open-time">Apertura</label>
+          <input id="open-time" type="time" name="openTime" value={settings.open_time.slice(0, 5)} required />
+        </div>
+        <div class="field">
+          <label for="close-time">Cierre</label>
+          <input id="close-time" type="time" name="closeTime" value={settings.close_time.slice(0, 5)} required />
+        </div>
+        <div class="field">
+          <label for="cutoff-time">Hora límite para pedidos del mismo día</label>
+          <input
+            id="cutoff-time"
+            type="time"
+            name="cutoffTime"
+            value={settings.cutoff_time.slice(0, 5)}
+            required
+          />
+        </div>
+        <div class="field">
+          <label for="slot-interval">Cada cuántos minutos suena una tanda</label>
+          <input
+            id="slot-interval"
+            type="number"
+            name="slotInterval"
+            min="15"
+            max="120"
+            step="5"
+            value={settings.slot_interval_min}
+            required
+          />
+          <span class="hint">Entre 15 y 120 minutos. Recomendado: 20 a 30.</span>
+        </div>
+        <div class="field">
+          <label for="min-gap">Separación mínima entre repeticiones</label>
+          <input
+            id="min-gap"
+            type="number"
+            name="minGap"
+            min="0"
+            max="240"
+            step="5"
+            value={settings.min_repeat_gap_min}
+            required
+          />
+          <span class="hint">Minutos entre dos emisiones del mismo anuncio. Recomendado: 45.</span>
+        </div>
+      </div>
+      <div class="note gold">
+        <i class="ph ph-info" aria-hidden="true"></i>
+        <p>
+          Límites fijos del sistema: {settings.max_emissions} emisiones por pedido y {settings.max_slot_seconds} segundos
+          por tanda. No se cambian desde aquí.
+        </p>
+      </div>
+    </div>
+
+    <div class="card pad stack">
+      <h2 style="font-size:1.35rem">Datos para la transferencia</h2>
+      <p class="read-time">Estos datos aparecen en el paso de pago del cliente.</p>
+      <div class="fields">
+        <div class="field">
+          <label for="bank-name">Banco</label>
+          <input id="bank-name" type="text" name="bankName" value={settings.bank_name} required />
+        </div>
+        <div class="field">
+          <label for="bank-account">Número de cuenta</label>
+          <input id="bank-account" type="text" name="bankAccount" value={settings.bank_account} required />
+        </div>
+        <div class="field">
+          <label for="bank-holder">A nombre de</label>
+          <input id="bank-holder" type="text" name="bankHolder" value={settings.bank_holder} required />
+        </div>
+        <div class="field">
+          <label for="help-phone">Teléfono de ayuda</label>
+          <input id="help-phone" type="tel" name="helpPhone" value={settings.help_phone} required />
+          <span class="hint">Aparece en el botón “¿Necesita ayuda?” del portal.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card pad stack">
+      <h2 style="font-size:1.35rem">Teléfonos bloqueados</h2>
+      <p class="read-time">
+        Un teléfono por línea. Los pedidos de estos números se rechazan automáticamente. Al rechazar por comprobante
+        falso, el número se agrega aquí.
+      </p>
+      <div class="field">
+        <label for="blocked-phones">Lista</label>
+        <textarea
+          id="blocked-phones"
+          name="blockedPhones"
+          rows="5"
+          placeholder="0991234567"
+        >{settings.blocked_phones.join('\n')}</textarea>
+      </div>
+    </div>
+
+    <div class="actions" style="border:none;padding-top:0">
+      <span class="read-time">Última actualización: {formatDateTime(settings.updated_at, settings.utc_offset_min)}</span>
+      <button class="btn btn-primary" type="submit">
+        <i class="ph ph-floppy-disk" aria-hidden="true"></i> Guardar ajustes
+      </button>
+    </div>
+  </form>
+</AdminLayout>

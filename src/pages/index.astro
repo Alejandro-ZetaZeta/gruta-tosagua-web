@@ -1,0 +1,170 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import LandingHeader from '../components/LandingHeader.astro';
+import { getSettings } from '../lib/settings';
+import { verifySession, sessionCookie } from '../lib/session';
+import { CATEGORIES, CATEGORY_META } from '../lib/types';
+import { formatClock } from '../lib/time';
+
+const settings = await getSettings();
+const loggedIn = Boolean(verifySession(Astro.cookies.get(sessionCookie.name)?.value));
+const categories = CATEGORIES.map((key) => ({ key, ...CATEGORY_META[key] }));
+const hours = `${formatClock(settings.open_time)} a ${formatClock(settings.close_time)}`;
+const cta = loggedIn ? '/cuenta/nuevo' : '/cuenta/registro';
+const ctaLabel = loggedIn ? 'Pedir un anuncio' : 'Crear cuenta';
+const cleanPhone = settings.help_phone.replace(/[^\d+]/g, '');
+---
+
+<BaseLayout title="Anuncios por megafonía">
+  <LandingHeader loggedIn={loggedIn} />
+
+  <main>
+    <section class="landing-hero wrap">
+      <div class="landing-hero-copy">
+        <span class="eyebrow">La Gruta · Anuncios por megafonía</span>
+        <h1>Su anuncio llega a toda la comunidad.</h1>
+        <p class="lead">
+          Sepelios, misas, rezos, saludos y avisos. Le ayudamos a redactarlo, usted paga por transferencia y la
+          encargada lo revisa antes de que suene.
+        </p>
+
+        <div class="row landing-cta">
+          <a class="btn btn-primary" href={cta}>
+            {ctaLabel} <i class="ph ph-arrow-right" aria-hidden="true"></i>
+          </a>
+          <a class="btn btn-ghost" href="/seguimiento">Consultar un pedido</a>
+        </div>
+
+        {!loggedIn && (
+          <p class="read-time">
+            ¿Ya tiene cuenta? <a href="/login">Entre aquí</a>. La encargada usa el mismo acceso.
+          </p>
+        )}
+
+        <div class="hero-trust">
+          <span><i class="ph ph-user-check" aria-hidden="true"></i> Revisión humana</span>
+          <span><i class="ph ph-coins" aria-hidden="true"></i> $1.00 por emisión</span>
+        </div>
+      </div>
+
+      <div class="card pad hero-card">
+        <span class="eyebrow">Precio simple</span>
+        <div class="hero-price">
+          <strong>$1.00</strong>
+          <span>por cada vez que su anuncio suena</span>
+        </div>
+        <ul class="hero-list">
+          <li>
+            <span class="ico"><i class="ph ph-megaphone" aria-hidden="true"></i></span>
+            <div>
+              <b>Su anuncio en tandas</b>
+              <span>Mañana y tarde, repartido durante el día.</span>
+            </div>
+          </li>
+          <li>
+            <span class="ico"><i class="ph ph-user-check" aria-hidden="true"></i></span>
+            <div>
+              <b>La encargada revisa todo</b>
+              <span>Ningún anuncio suena sin su aprobación.</span>
+            </div>
+          </li>
+          <li>
+            <span class="ico"><i class="ph ph-receipt" aria-hidden="true"></i></span>
+            <div>
+              <b>Pague por transferencia</b>
+              <span>Suba el comprobante desde su cuenta.</span>
+            </div>
+          </li>
+        </ul>
+        <div class="meta">
+          <span class="pill gold">Sin suscripción</span>
+          <span class="pill">Tandas de {hours}</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="como-funciona" class="landing-section wrap">
+      <div class="section-head">
+        <span class="eyebrow">Cómo funciona</span>
+        <h2>Tres pasos, sin complicaciones.</h2>
+        <p class="muted">Usted escribe, nosotros cuidamos la forma y la encargada da el visto bueno.</p>
+      </div>
+      <div class="landing-steps">
+        <div class="card pad step-card">
+          <span class="step-num">1</span>
+          <h3>Cree su cuenta</h3>
+          <p class="muted">Nombre, correo y teléfono. Así sabemos cómo contactarle y guardamos sus pedidos.</p>
+        </div>
+        <div class="card pad step-card">
+          <span class="step-num">2</span>
+          <h3>Cuéntenos su anuncio</h3>
+          <p class="muted">Elija el tipo, escriba con sus palabras y vea el total: $1.00 por cada emisión.</p>
+        </div>
+        <div class="card pad step-card">
+          <span class="step-num">3</span>
+          <h3>Pague y espere la revisión</h3>
+          <p class="muted">Transfiera y suba el comprobante. La encargada revisa, programa y suena en la tanda.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="landing-section alt">
+      <div class="wrap">
+        <div class="section-head">
+          <span class="eyebrow">Para cada ocasión</span>
+          <h2>Un anuncio con el tono correcto.</h2>
+          <p class="muted">La voz y el texto se adaptan a lo que necesita comunicar.</p>
+        </div>
+        <div class="choices cat-grid">
+          {categories.map((category) => (
+            <a class="choice" href={loggedIn ? '/cuenta/nuevo' : '/cuenta/registro'}>
+              <span class="ico"><i class={`ph ph-${category.icon}`} aria-hidden="true"></i></span>
+              <b>{category.label}</b>
+              <span>{category.help}</span>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section id="precio" class="landing-section wrap">
+      <div class="card pad price-band">
+        <div>
+          <span class="eyebrow">Precio</span>
+          <h2>$1.00 por emisión.</h2>
+          <p class="muted">
+            Pague solo por las veces que su anuncio suena. Sin planes, sin suscripciones y sin cargos escondidos.
+            Transfiera el total y suba el comprobante.
+          </p>
+        </div>
+        <div class="price-actions">
+          <a class="btn btn-primary" href={cta}>{ctaLabel}</a>
+          <a class="btn btn-ghost" href="/seguimiento">Consultar un pedido</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="landing-footer">
+    <div class="wrap footer-grid">
+      <div>
+        <b class="footer-brand">La Gruta</b>
+        <p class="muted">Anuncios por megafonía para la comunidad.</p>
+      </div>
+      <div>
+        <b>Portal</b>
+        <a href="/login">Entrar</a>
+        <a href="/cuenta/registro">Crear cuenta</a>
+        <a href="/seguimiento">Consultar pedido</a>
+      </div>
+      <div>
+        <b>Contacto</b>
+        <a href={`tel:${cleanPhone}`}>{settings.help_phone}</a>
+        <span class="muted">Tandas de {hours}</span>
+      </div>
+    </div>
+    <p class="read-time wrap">
+      Tandas de {hours} · La encargada revisa cada anuncio antes de emitirlo.
+    </p>
+  </footer>
+</BaseLayout>

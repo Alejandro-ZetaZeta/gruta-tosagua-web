@@ -1,0 +1,117 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Header from '../components/Header.astro';
+import WizardSteps from '../components/WizardSteps.astro';
+import ClientTimeline from '../components/ClientTimeline.astro';
+import { getSettings } from '../lib/settings';
+import { getOrderByCode, getOrderSlots } from '../lib/services/orders';
+import { latestPayment } from '../lib/services/payments';
+import { CATEGORY_META } from '../lib/types';
+import { formatMoney } from '../lib/time';
+
+const settings = await getSettings();
+const code = (Astro.url.searchParams.get('codigo') ?? '').trim();
+const error = Astro.url.searchParams.get('error') ?? '';
+const order = code ? await getOrderByCode(code) : null;
+const slots = order ? await getOrderSlots(order.id) : [];
+const payment = order ? await latestPayment(order.id) : null;
+---
+
+<BaseLayout title="Pedido recibido">
+  <Header helpPhone={settings.help_phone} />
+
+  <div class="layout">
+    <aside class="side">
+      <WizardSteps current={4} />
+    </aside>
+
+    <main>
+      <div class="card pad">
+        {!order ? (
+          <div class="done-hero">
+            <div class="seal" style="background:var(--color-gold-soft);color:var(--color-gold-ink)">
+              <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+            </div>
+            <h1>No encontramos ese pedido</h1>
+            <p class="muted">Revise el código o consulte con su teléfono.</p>
+            <div class="actions" style="border:none;justify-content:center">
+              <a class="btn btn-primary" href="/seguimiento">Consultar mi pedido</a>
+              <a class="btn btn-ghost" href="/">Pedir un anuncio</a>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div class="done-hero">
+              <div class="seal"><i class="ph ph-check-fat" aria-hidden="true"></i></div>
+              <h1>¡Recibimos su pedido!</h1>
+              <p class="muted">
+                Guárdelo para consultar: <strong>{order.order_code}</strong>
+              </p>
+            </div>
+
+            {error && (
+              <div class="alert danger" style="margin-top:20px">
+                <i class="ph ph-warning" aria-hidden="true"></i>
+                <span>{error}</span>
+              </div>
+            )}
+
+            {payment && (
+              <div class="alert ok" style="margin-top:20px">
+                <i class="ph ph-check-circle" aria-hidden="true"></i>
+                <span>Comprobante recibido. La encargada lo revisará y programará las tandas.</span>
+              </div>
+            )}
+
+            <div class="code" style="margin-top:24px">
+              <span>Su código de pedido</span>
+              <b data-code>{order.order_code}</b>
+              <button type="button" class="btn btn-sm" data-copy>
+                <i class="ph ph-copy" aria-hidden="true"></i> Copiar código
+              </button>
+              <span class="sr-only" role="status" data-copy-status></span>
+            </div>
+
+            <dl class="bank" style="margin-top:20px">
+              <div><dt>Tipo de anuncio</dt><dd>{CATEGORY_META[order.category].label}</dd></div>
+              <div><dt>Total pagado</dt><dd>{formatMoney(Number(order.amount_due))}</dd></div>
+              <div>
+                <dt>Emisiones</dt>
+                <dd>{order.total_emissions} {order.total_emissions === 1 ? 'vez' : 'veces'}</dd>
+              </div>
+            </dl>
+
+            <ClientTimeline order={order} hasReceipt={Boolean(payment)} slots={slots} settings={settings} />
+
+            <div class="row" style="justify-content:center;margin-top:24px">
+              <a class="btn btn-ghost" href={`/seguimiento?codigo=${encodeURIComponent(order.order_code)}`}>
+                <i class="ph ph-magnifying-glass" aria-hidden="true"></i> Consultar mi pedido
+              </a>
+              <a class="btn btn-primary" href="/cuenta/nuevo">
+                <i class="ph ph-plus" aria-hidden="true"></i> Pedir otro anuncio
+              </a>
+            </div>
+          </>
+        )}
+      </div>
+    </main>
+  </div>
+</BaseLayout>
+
+<script>
+  const button = document.querySelector<HTMLButtonElement>('[data-copy]');
+  const code = document.querySelector<HTMLElement>('[data-code]')?.textContent ?? '';
+  const status = document.querySelector<HTMLElement>('[data-copy-status]');
+
+  button?.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      if (status) status.textContent = 'Código copiado.';
+      const original = button.innerHTML;
+      button.innerHTML = '<i class="ph ph-check" aria-hidden="true"></i> ¡Copiado!';
+      window.setTimeout(() => (button.innerHTML = original), 2200);
+    } catch {
+      if (status) status.textContent = `Su código es ${code}.`;
+    }
+  });
+</script>

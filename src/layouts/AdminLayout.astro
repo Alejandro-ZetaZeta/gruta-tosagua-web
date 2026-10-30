@@ -1,0 +1,72 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import Header from '../components/Header.astro';
+import { db } from '../lib/insforge';
+import { formatDateShort, localDateKey, offsetFromEnv } from '../lib/time';
+
+interface Props {
+  title: string;
+  active: 'review' | 'slots' | 'close' | 'history' | 'settings';
+  adminEmail: string;
+}
+
+const { title, active, adminEmail } = Astro.props;
+
+const { count: pending } = await db()
+  .database.from('orders')
+  .select('id', { count: 'exact' })
+  .eq('status', 'UNDER_REVIEW')
+  .limit(1);
+
+const today = formatDateShort(localDateKey(new Date(), offsetFromEnv()));
+
+const items = [
+  { key: 'review', href: '/panel', label: 'Por revisar', short: 'Revisar', icon: 'tray' },
+  { key: 'slots', href: '/panel/tandas', label: 'Tandas de hoy', short: 'Tandas', icon: 'calendar-check' },
+  { key: 'close', href: '/panel/cierre', label: 'Cierre del día', short: 'Cierre', icon: 'list-checks' },
+  { key: 'history', href: '/panel/historial', label: 'Historial', short: 'Historial', icon: 'archive' },
+  { key: 'settings', href: '/panel/ajustes', label: 'Ajustes', short: 'Ajustes', icon: 'gear-six' },
+] as const;
+---
+
+<BaseLayout title={title} noindex>
+  <Header variant="admin">
+    <span slot="right" class="pill gold help">
+      <i class="ph ph-calendar-blank" aria-hidden="true"></i> {today}
+    </span>
+  </Header>
+
+  <div class="admin">
+    <nav class="nav" aria-label="Secciones del panel">
+      {items.map((item) => (
+        <a href={item.href} aria-current={active === item.key ? 'page' : undefined}>
+          <i class={`ph ph-${item.icon}`} aria-hidden="true"></i>
+          {item.label}
+          {item.key === 'review' && (pending ?? 0) > 0 && <span class="badge">{pending}</span>}
+        </a>
+      ))}
+      <form class="who" method="POST" action="/api/logout">
+        <b>{adminEmail}</b><br />
+        Encargada
+        <button class="btn btn-ghost btn-sm" type="submit" style="margin-top:10px;width:100%">
+          <i class="ph ph-sign-out" aria-hidden="true"></i> Cerrar sesión
+        </button>
+      </form>
+    </nav>
+
+    <main class="adm-main">
+      <slot />
+    </main>
+  </div>
+
+  <nav class="mobile-nav" aria-label="Secciones del panel">
+    {items
+      .filter((item) => item.key !== 'history')
+      .map((item) => (
+        <a href={item.href} aria-current={active === item.key ? 'page' : undefined}>
+          <i class={`ph ph-${item.icon}`} aria-hidden="true"></i>
+          {item.short}
+        </a>
+      ))}
+  </nav>
+</BaseLayout>

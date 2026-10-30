@@ -1,0 +1,27 @@
+---
+interface Props {
+  loggedIn: boolean;
+}
+
+const { loggedIn } = Astro.props;
+---
+
+<header class="top">
+  <a class="logo" href="/" aria-label="La Gruta, inicio">
+    <i class="ph ph-church" aria-hidden="true"></i>
+  </a>
+  <div class="brand">
+    <b>La Gruta</b>
+    <span>Anuncios por megafonía</span>
+  </div>
+
+  <nav class="landing-nav" aria-label="Navegación principal">
+    <a class="hide-mobile" href="#como-funciona">Cómo funciona</a>
+    <a class="hide-mobile" href="#precio">Precio</a>
+    <a class="hide-mobile" href="/seguimiento">Consultar pedido</a>
+    <a class="btn btn-ghost btn-sm" href={loggedIn ? '/cuenta' : '/login'}>
+      <i class="ph ph-user" aria-hidden="true"></i>
+      <span>{loggedIn ? 'Mi cuenta' : 'Entrar'}</span>
+    </a>
+  </nav>
+</header>

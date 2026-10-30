@@ -1,0 +1,169 @@
+---
+import { actions } from 'astro:actions';
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import PauseBand from '../../components/PauseBand.astro';
+import SlotBars from '../../components/SlotBars.astro';
+import ReviewCard from '../../components/ReviewCard.astro';
+import { getSettings } from '../../lib/settings';
+import { getDashboardStats, getTodaySlotGroups } from '../../lib/services/stats';
+import { getReviewItem, getReviewQueue } from '../../lib/services/orders';
+import { signedUrl } from '../../lib/services/payments';
+import { formatMoney } from '../../lib/time';
+import { CATEGORY_META } from '../../lib/types';
+import { friendlyError } from '../../lib/errors';
+
+const adminEmail = Astro.locals.adminEmail ?? '';
+const settings = await getSettings();
+const [stats, today, queue] = await Promise.all([
+  getDashboardStats(settings),
+  getTodaySlotGroups(settings),
+  getReviewQueue(),
+]);
+
+const params = Astro.url.searchParams;
+const requestedId = params.get('pedido');
+let selected = requestedId ? await getReviewItem(requestedId) : null;
+if (selected && selected.status !== 'UNDER_REVIEW') selected = null;
+if (!selected && queue.length > 0) selected = queue[0]!;
+
+const receiptUrl = selected?.payment ? await signedUrl('receipts', selected.payment.receipt_key) : null;
+
+const approve = Astro.getActionResult(actions.adminApprove);
+if (approve?.data?.ok) return Astro.redirect(`/panel?aprobado=${encodeURIComponent(approve.data.code)}`);
+
+const rejected = Astro.getActionResult(actions.adminReject);
+if (rejected?.data?.ok) return Astro.redirect(`/panel?rechazado=${encodeURIComponent(rejected.data.code)}`);
+
+const photo = Astro.getActionResult(actions.adminRequestPhoto);
+if (photo?.data?.ok) return Astro.redirect('/panel?foto=1');
+
+const actionError =
+  friendlyError(approve?.error) || friendlyError(rejected?.error) || friendlyError(photo?.error);
+
+const approvedCode = params.get('aprobado');
+const rejectedCode = params.get('rechazado');
+const photoRequested = params.get('foto') === '1';
+
+function queuePill(item: (typeof queue)[number]): { cls: string; label: string; icon: string } {
+  if (item.is_urgent) return { cls: 'danger', label: 'Urgente', icon: 'lightning' };
+  if (!item.payment) return { cls: 'warn', label: 'Sin comprobante', icon: 'receipt' };
+  if (item.payment.validation_flags.reference_unused === false) {
+    return { cls: 'danger', label: 'Comprobante repetido', icon: 'warning' };
+  }
+  if (item.payment.validation_flags.code_matches === false) {
+    return { cls: 'warn', label: 'Revisar código', icon: 'warning' };
+  }
+  if (item.payment.validation_flags.manual_review) return { cls: 'warn', label: 'Lectura manual', icon: 'eye' };
+  return { cls: 'ok', label: 'Datos coinciden', icon: 'check-circle' };
+}
+---
+
+<AdminLayout title="Por revisar" active="review" adminEmail={adminEmail}>
+  <PauseBand settings={settings} next={today.next} />
+
+  <div class="kpis">
+    <div class="card kpi"><b>{stats.pendingReview}</b><span>Por revisar</span></div>
+    <div class="card kpi"><b>{stats.queuedToday}</b><span>En cola hoy</span></div>
+    <div class="card kpi"><b>{stats.playedToday}</b><span>Emitidos hoy</span></div>
+    <div class="card kpi"><b>{formatMoney(stats.collectedToday)}</b><span>Cobrado hoy</span></div>
+  </div>
+
+  <div class="adm-grid">
+    <div class="stack">
+      <div class="adm-head">
+        <h2 style="font-size:1.5rem">Por revisar</h2>
+        <span class="muted">Ordenado por urgencia</span>
+      </div>
+
+      {approvedCode && (
+        <div class="alert ok">
+          <i class="ph ph-check-circle" aria-hidden="true"></i>
+          <span>Pedido <strong>{approvedCode}</strong> aprobado y programado. El reproductor lo descargará en su próxima revisión.</span>
+        </div>
+      )}
+      {rejectedCode && (
+        <div class="alert warn">
+          <i class="ph ph-prohibit" aria-hidden="true"></i>
+          <span>Pedido <strong>{rejectedCode}</strong> rechazado. El teléfono quedó bloqueado.</span>
+        </div>
+      )}
+      {photoRequested && (
+        <div class="alert info">
+          <i class="ph ph-camera" aria-hidden="true"></i>
+          <span>Le pedimos otra foto al cliente. El pedido sigue en la cola.</span>
+        </div>
+      )}
+      {actionError && (
+        <div class="alert danger">
+          <i class="ph ph-warning" aria-hidden="true"></i>
+          <span>{actionError}</span>
+        </div>
+      )}
+
+      {queue.length === 0 ? (
+        <p class="empty">
+          <i class="ph ph-check-circle" aria-hidden="true"></i><br />
+          No hay pedidos por revisar.
+        </p>
+      ) : (
+        <div class="queue">
+          {queue.map((item) => {
+            const pill = queuePill(item);
+            const category = CATEGORY_META[item.category];
+            return (
+              <a
+                class="q-item"
+                href={`/panel?pedido=${item.id}`}
+                aria-current={selected?.id === item.id ? 'true' : undefined}
+              >
+                <span class="ico"><i class={`ph ph-${category.icon}`} aria-hidden="true"></i></span>
+                <div class="grow">
+                  <b>{category.short} · {item.client_name}</b>
+                  <span class="muted">
+                    {item.order_code} · {item.total_emissions} {item.total_emissions === 1 ? 'vez' : 'veces'} ·{' '}
+                    {formatMoney(Number(item.amount_due))}
+                  </span>
+                </div>
+                <span class={`pill ${pill.cls}`}>
+                  <i class={`ph ph-${pill.icon}`} aria-hidden="true"></i> {pill.label}
+                </span>
+              </a>
+            );
+          })}
+        </div>
+      )}
+
+      {selected ? (
+        <ReviewCard item={selected} receiptUrl={receiptUrl} />
+      ) : (
+        queue.length > 0 && <p class="empty">Elija un pedido de la lista para revisarlo.</p>
+      )}
+    </div>
+
+    <aside class="stack">
+      <div class="card pad stack">
+        <div class="adm-head">
+          <h3>Tandas de hoy</h3>
+          <span class="muted">máx. {settings.max_slot_seconds} s</span>
+        </div>
+        <SlotBars groups={today.groups} maxSeconds={settings.max_slot_seconds} />
+        <a class="btn btn-ghost btn-sm" href="/panel/tandas">
+          <i class="ph ph-calendar-check" aria-hidden="true"></i> Ver todas las tandas
+        </a>
+      </div>
+
+      <div class="card pad stack">
+        <h3 style="font-size:1.15rem">Atajos</h3>
+        <a class="btn btn-ghost btn-sm" href="/panel/cierre">
+          <i class="ph ph-list-checks" aria-hidden="true"></i> Cierre del día
+        </a>
+        <a class="btn btn-ghost btn-sm" href="/panel/historial">
+          <i class="ph ph-archive" aria-hidden="true"></i> Historial de pedidos
+        </a>
+        <a class="btn btn-ghost btn-sm" href="/panel/ajustes">
+          <i class="ph ph-gear-six" aria-hidden="true"></i> Ajustes
+        </a>
+      </div>
+    </aside>
+  </div>
+</AdminLayout>

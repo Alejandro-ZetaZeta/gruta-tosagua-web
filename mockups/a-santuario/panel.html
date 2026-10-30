@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Panel de la encargada · La Gruta</title>
+<link rel="stylesheet" href="style.css" />
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+</head>
+<body>
+<header class="top">
+  <div class="logo"><i class="ph ph-church" aria-hidden="true"></i></div>
+  <div class="brand"><b>La Gruta</b><span>Panel de la encargada</span></div>
+  <span class="pill gold help"><i class="ph ph-calendar-blank" aria-hidden="true"></i> Jueves 29 oct</span>
+</header>
+
+<div class="admin">
+  <nav class="nav" aria-label="Secciones">
+    <a href="#" aria-current="page"><i class="ph ph-tray" aria-hidden="true"></i> Por revisar <span class="badge">3</span></a>
+    <a href="#"><i class="ph ph-calendar-check" aria-hidden="true"></i> Tandas de hoy</a>
+    <a href="#"><i class="ph ph-list-checks" aria-hidden="true"></i> Cierre del día</a>
+    <a href="#"><i class="ph ph-archive" aria-hidden="true"></i> Historial</a>
+    <a href="#"><i class="ph ph-gear-six" aria-hidden="true"></i> Ajustes</a>
+    <div class="who"><b>Sor Carmen</b><br />Encargada</div>
+  </nav>
+
+  <main class="adm-main">
+    <section class="pause" aria-live="polite">
+      <span class="ico"><i class="ph ph-speaker-high when-live" aria-hidden="true"></i><i class="ph ph-speaker-slash when-paused" aria-hidden="true"></i></span>
+      <div class="state">
+        <b class="when-live">Emisiones activas</b><b class="when-paused">Emisiones en pausa</b>
+        <span class="when-live">Próxima tanda a las 10:30 · 3 anuncios (95 s)</span>
+        <span class="when-paused">Nada sonará hasta que vuelva a activar.</span>
+      </div>
+      <label class="switch"><span>Pausar todo</span><input type="checkbox" role="switch" data-pause /></label>
+    </section>
+
+    <div class="kpis">
+      <div class="card kpi"><b>3</b><span>Por revisar</span></div>
+      <div class="card kpi"><b>14</b><span>En cola hoy</span></div>
+      <div class="card kpi"><b>22</b><span>Emitidos hoy</span></div>
+      <div class="card kpi"><b>$36</b><span>Cobrado hoy</span></div>
+    </div>
+
+    <div class="adm-grid">
+      <div class="stack">
+        <div class="adm-head"><h2>Por revisar</h2><span class="muted">Ordenado por urgencia</span></div>
+        <div class="queue">
+          <div class="q-item" aria-current="true"><span class="ico"><i class="ph ph-flower-lotus" aria-hidden="true"></i></span><div class="grow"><b>Sepelio · María Quispe</b><span class="muted">GRU-4829 · 3 veces · $3.00</span></div><span class="pill danger"><i class="ph ph-lightning" aria-hidden="true"></i> Urgente</span></div>
+          <div class="q-item"><span class="ico"><i class="ph ph-cake" aria-hidden="true"></i></span><div class="grow"><b>Saludo · Luis Andrade</b><span class="muted">GRU-4831 · 2 veces · $2.00</span></div><span class="pill warn">Revisar código</span></div>
+          <div class="q-item"><span class="ico"><i class="ph ph-storefront" aria-hidden="true"></i></span><div class="grow"><b>Promoción · Panadería Sol</b><span class="muted">GRU-4833 · 5 veces · $5.00</span></div><span class="pill">Lectura manual</span></div>
+        </div>
+
+        <article class="card pad review">
+          <div class="review-top">
+            <div><span class="eyebrow">GRU-4829 · Sepelio</span><h3>María Quispe · 099 123 4567</h3></div>
+            <div class="meta"><span class="pill danger">Urgente</span><span class="pill">Jue 29 oct</span><span class="pill gold">3 veces</span></div>
+          </div>
+          <div class="receipt">
+            <div class="receipt-img"><span><i class="ph ph-image" aria-hidden="true"></i><br />Foto del comprobante<br />(toque para ampliar)</span></div>
+            <div class="stack">
+              <dl class="bank">
+                <div><dt>Monto</dt><dd>$3.00</dd></div>
+                <div><dt>Banco</dt><dd>Pichincha</dd></div>
+                <div><dt>N.º comprobante</dt><dd>0098812734</dd></div>
+              </dl>
+              <ul class="flags">
+                <li class="ok"><i class="ph ph-check-circle" aria-hidden="true"></i> El monto coincide</li>
+                <li class="ok"><i class="ph ph-check-circle" aria-hidden="true"></i> Comprobante no usado antes</li>
+                <li class="ok"><i class="ph ph-check-circle" aria-hidden="true"></i> Cuenta de destino correcta</li>
+                <li class="warn"><i class="ph ph-warning" aria-hidden="true"></i> No escribió el código en el concepto</li>
+              </ul>
+            </div>
+          </div>
+          <div class="field">
+            <label for="s">Texto que leerá la voz <span class="muted">(puede editarlo)</span></label>
+            <textarea id="s">Con profundo pesar, la familia Quispe comunica el fallecimiento de don José Quispe. Su velorio se realiza en su domicilio, en la calle Bolívar. El sepelio será mañana a las tres de la tarde. La familia agradece su compañía y oraciones.</textarea>
+            <span class="hint">≈ 25 segundos (máximo 110)</span>
+          </div>
+          <div class="field">
+            <span style="font-weight:700">Tono de voz</span>
+            <div class="voices">
+              <label class="voice"><input type="radio" name="v" checked /><span><i class="ph ph-moon-stars" aria-hidden="true"></i> Solemne</span></label>
+              <label class="voice"><input type="radio" name="v" /><span><i class="ph ph-sun" aria-hidden="true"></i> Alegre</span></label>
+              <label class="voice"><input type="radio" name="v" /><span><i class="ph ph-chat-circle" aria-hidden="true"></i> Neutral</span></label>
+              <button class="btn btn-ghost btn-sm"><i class="ph ph-play" aria-hidden="true"></i> Escuchar</button>
+            </div>
+          </div>
+          <div class="review-actions">
+            <button class="btn btn-primary"><i class="ph ph-check" aria-hidden="true"></i> Aprobar y programar</button>
+            <button class="btn btn-ghost"><i class="ph ph-camera" aria-hidden="true"></i> Pedir otra foto</button>
+            <button class="btn btn-danger"><i class="ph ph-prohibit" aria-hidden="true"></i> Comprobante falso · bloquear</button>
+          </div>
+        </article>
+      </div>
+
+      <aside class="card pad stack">
+        <div class="adm-head"><h3>Tandas de hoy</h3><span class="muted">máx. 120 s</span></div>
+        <ul class="slots">
+          <li class="slot played"><time>09:30</time><div class="bar" style="--fill:80%"><span>4 anuncios · 96 s · emitida</span></div></li>
+          <li class="slot played"><time>10:00</time><div class="bar" style="--fill:55%"><span>2 anuncios · 66 s · emitida</span></div></li>
+          <li class="slot next"><time>10:30</time><div class="bar" style="--fill:79%"><span>3 anuncios · 95 s · próxima</span></div></li>
+          <li class="slot"><time>11:00</time><div class="bar" style="--fill:40%"><span>2 anuncios · 48 s</span></div></li>
+          <li class="slot"><time>11:30</time><div class="bar" style="--fill:100%"><span>Llena · 120 s</span></div></li>
+          <li class="slot"><time>12:00</time><div class="bar" style="--fill:20%"><span>1 anuncio · 25 s</span></div></li>
+        </ul>
+        <a class="btn btn-ghost btn-sm" href="#"><i class="ph ph-list-checks" aria-hidden="true"></i> Ir al cierre del día</a>
+      </aside>
+    </div>
+  </main>
+</div>
+
+<nav class="mobile-nav" aria-label="Secciones">
+  <a href="#" aria-current="page"><i class="ph ph-tray" aria-hidden="true"></i>Revisar</a>
+  <a href="#"><i class="ph ph-calendar-check" aria-hidden="true"></i>Tandas</a>
+  <a href="#"><i class="ph ph-list-checks" aria-hidden="true"></i>Cierre</a>
+  <a href="#"><i class="ph ph-gear-six" aria-hidden="true"></i>Ajustes</a>
+</nav>
+<script src="../shared/mock.js"></script>
+</body>
+</html>
+

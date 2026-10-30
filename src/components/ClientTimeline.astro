@@ -1,0 +1,95 @@
+---
+import type { Order, Settings } from '../lib/types';
+import { formatDateLong, formatDateShort, formatTime, localDateKey } from '../lib/time';
+
+interface Props {
+  order: Order;
+  hasReceipt: boolean;
+  slots: Array<{ slot_time: string }>;
+  settings: Settings;
+}
+
+const { order, hasReceipt, slots, settings } = Astro.props;
+const offset = settings.utc_offset_min;
+const rejected = order.status === 'REJECTED';
+const scheduled = ['APPROVED', 'SCHEDULED', 'COMPLETED'].includes(order.status);
+const completed = order.status === 'COMPLETED';
+---
+
+<ol class="timeline">
+  <li class={hasReceipt ? 'ok' : 'now'}>
+    <span class="dot">
+      <i class={`ph ph-${hasReceipt ? 'check' : 'hourglass-medium'}`} aria-hidden="true"></i>
+    </span>
+    <div>
+      {hasReceipt ? (
+        <>
+          <b>Comprobante recibido</b>
+          <p class="muted">Lo recibimos y quedó guardado para revisión.</p>
+        </>
+      ) : (
+        <>
+          <b>Falta su comprobante</b>
+          <p class="muted">Suba la foto de la transferencia para continuar.</p>
+        </>
+      )}
+    </div>
+  </li>
+
+  <li class={hasReceipt && order.status === 'UNDER_REVIEW' ? 'now' : hasReceipt && !rejected ? 'ok' : ''}>
+    <span class="dot">
+      <i
+        class={`ph ph-${hasReceipt && order.status === 'UNDER_REVIEW' ? 'hourglass-medium' : hasReceipt && !rejected ? 'check' : 'hourglass-medium'}`}
+        aria-hidden="true"
+      ></i>
+    </span>
+    <div>
+      <b>La encargada lo revisa</b>
+      <p class="muted">
+        {order.status === 'PENDING_PAYMENT'
+          ? 'En cuanto llegue el comprobante, empieza la revisión.'
+          : 'Normalmente toma menos de 1 hora en horario de atención.'}
+      </p>
+      {order.photo_requested_at && (
+        <p class="error" style="margin-top:6px">
+          La encargada pidió otra foto del comprobante. Puede subirla aquí abajo.
+        </p>
+      )}
+    </div>
+  </li>
+  <li class={rejected ? 'bad' : completed ? 'ok' : scheduled ? 'now' : ''}>
+    <span class="dot">
+      <i class={`ph ph-${rejected ? 'prohibit' : completed ? 'check' : 'speaker-high'}`} aria-hidden="true"></i>
+    </span>
+    <div>
+      {rejected ? (
+        <>
+          <b>El pedido no pudo programarse</b>
+          <p class="muted">Comuníquese con la encargada al {settings.help_phone} para resolverlo.</p>
+        </>
+      ) : scheduled ? (
+        <>
+          <b>{completed ? 'Anuncio emitido' : `Su anuncio sonará ${order.total_emissions} ${order.total_emissions === 1 ? 'vez' : 'veces'}`}</b>
+          <p class="muted">Programado para el {formatDateLong(order.target_date)}.</p>
+          {slots.length > 0 && (
+            <div class="times" style="margin-top:8px">
+              {slots.map((slot) => (
+                <span>
+                  {formatDateShort(localDateKey(new Date(slot.slot_time), offset))} · {formatTime(slot.slot_time, offset)}
+                </span>
+              ))}
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          <b>Emisión programada</b>
+          <p class="muted">
+            Sonará {order.total_emissions} {order.total_emissions === 1 ? 'vez' : 'veces'} el{' '}
+            {formatDateLong(order.target_date)}, en tandas de la mañana y la tarde.
+          </p>
+        </>
+      )}
+    </div>
+  </li>
+</ol>

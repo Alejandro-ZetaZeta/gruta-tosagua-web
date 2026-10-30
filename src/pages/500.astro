@@ -1,0 +1,28 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Algo salió mal">
+  <header class="top">
+    <a class="logo" href="/" aria-label="La Gruta, inicio">
+      <i class="ph ph-church" aria-hidden="true"></i>
+    </a>
+    <div class="brand"><b>La Gruta</b><span>Anuncios por megafonía</span></div>
+  </header>
+
+  <div class="narrow">
+    <div class="card pad done-hero">
+      <div class="seal" style="background:var(--color-danger-soft);color:var(--color-danger)">
+        <i class="ph ph-warning" aria-hidden="true"></i>
+      </div>
+      <h1>Algo salió mal</h1>
+      <p class="muted">
+        No pudimos completar esta acción. Intente de nuevo en un momento o comuníquese con la encargada.
+      </p>
+      <div class="row" style="justify-content:center;margin-top:24px">
+        <a class="btn btn-primary" href="/">Volver al inicio</a>
+        <a class="btn btn-ghost" href="/seguimiento">Consultar mi pedido</a>
+      </div>
+    </div>
+  </div>
+</BaseLayout>

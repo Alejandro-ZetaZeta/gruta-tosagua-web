@@ -1,0 +1,43 @@
+---
+import type { SlotGroup } from '../lib/services/stats';
+
+interface Props {
+  groups: SlotGroup[];
+  maxSeconds: number;
+}
+
+const { groups, maxSeconds } = Astro.props;
+---
+
+{groups.length === 0 ? (
+  <p class="empty">Todavía no hay tandas programadas para hoy.</p>
+) : (
+  <ul class="slots">
+    {groups.map((group) => {
+      const fill = Math.min(100, Math.round((group.seconds / maxSeconds) * 100));
+      const suffix =
+        group.status === 'played'
+          ? ' · emitida'
+          : group.status === 'next'
+            ? ' · próxima'
+            : group.status === 'failed'
+              ? ' · falló'
+              : group.status === 'full'
+                ? ' · llena'
+                : '';
+      return (
+        <li class:list={['slot', group.status]}>
+          <time datetime={group.slotAt}>{group.time}</time>
+          <div class="bar" style={`--fill: ${fill}%`}>
+            <span>
+              {group.status === 'full'
+                ? `Llena · ${group.seconds} s`
+                : `${group.count} ${group.count === 1 ? 'anuncio' : 'anuncios'} · ${group.seconds} s${suffix}`}
+              <small class="slot-orders">{group.codes.join(' · ')}</small>
+            </span>
+          </div>
+        </li>
+      );
+    })}
+  </ul>
+)}

@@ -1,0 +1,43 @@
+---
+interface Props {
+  variant?: 'client' | 'admin';
+  helpPhone?: string;
+  subtitle?: string;
+  homeHref?: string;
+  children?: unknown;
+}
+
+const {
+  variant = 'client',
+  helpPhone,
+  subtitle = variant === 'admin' ? 'Panel de la encargada' : 'Anuncios por megafonía',
+  homeHref = variant === 'admin' ? '/panel' : '/',
+} = Astro.props;
+
+const cleanPhone = (helpPhone ?? '').replace(/[^\d+]/g, '');
+---
+
+<header class="top">
+  <a class="logo" href={homeHref} aria-label="La Gruta, inicio">
+    <i class="ph ph-church" aria-hidden="true"></i>
+  </a>
+  <div class="brand">
+    <b>La Gruta</b>
+    <span>{subtitle}</span>
+  </div>
+  <slot name="right">
+    {helpPhone ? (
+      <a
+        class="btn btn-ghost btn-sm help"
+        href={`tel:${cleanPhone}`}
+        aria-label={helpPhone ? '¿Necesita ayuda? Llame a La Gruta' : 'Consultar un pedido'}
+      >
+        <i class="ph ph-phone" aria-hidden="true"></i><span>¿Necesita ayuda?</span>
+      </a>
+    ) : (
+      <a class="btn btn-ghost btn-sm help" href="/seguimiento">
+        <i class="ph ph-magnifying-glass" aria-hidden="true"></i><span>Consultar pedido</span>
+      </a>
+    )}
+  </slot>
+</header>

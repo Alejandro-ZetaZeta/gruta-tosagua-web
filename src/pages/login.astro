@@ -1,0 +1,73 @@
+---
+import { actions } from 'astro:actions';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getSettings } from '../lib/settings';
+import { getProfile } from '../lib/profiles';
+import { verifySession, sessionCookie } from '../lib/session';
+import { friendlyError } from '../lib/errors';
+
+const settings = await getSettings();
+const queryError = Astro.url.searchParams.get('error') ?? '';
+
+const result = Astro.getActionResult(actions.login);
+if (result?.data?.ok) return Astro.redirect(result.data.isAdmin ? '/panel' : '/cuenta');
+
+const existing = verifySession(Astro.cookies.get(sessionCookie.name)?.value);
+if (existing) {
+  const profile = await getProfile(existing.userId);
+  if (profile) return Astro.redirect(profile.role === 'ADMIN' ? '/panel' : '/cuenta');
+}
+---
+
+<BaseLayout title="Entrar">
+  <header class="top">
+    <a class="logo" href="/" aria-label="La Gruta, inicio">
+      <i class="ph ph-church" aria-hidden="true"></i>
+    </a>
+    <div class="brand">
+      <b>La Gruta</b>
+      <span>Acceso</span>
+    </div>
+    <a class="btn btn-ghost btn-sm" href="/" style="margin-left:auto" aria-label="Volver al inicio">
+      <i class="ph ph-arrow-left" aria-hidden="true"></i> <span>Volver al inicio</span>
+    </a>
+  </header>
+
+  <div class="login-wrap">
+    <div class="card pad login-card">
+      <div class="login-head">
+        <div class="logo"><i class="ph ph-user" aria-hidden="true"></i></div>
+        <h1>Entrar</h1>
+        <p class="muted">Clientes y encargada usan la misma entrada. Le llevaremos a su cuenta o al panel según su rol.</p>
+      </div>
+
+      {(queryError || result?.error) && (
+        <div class="alert danger">
+          <i class="ph ph-warning" aria-hidden="true"></i>
+          <span>{queryError || friendlyError(result?.error)}</span>
+        </div>
+      )}
+
+      <form method="POST" action={actions.login} class="stack">
+        <div class="field">
+          <label for="login-email">Correo electrónico</label>
+          <input id="login-email" type="email" name="email" autocomplete="username" required />
+        </div>
+        <div class="field">
+          <label for="login-password">Contraseña</label>
+          <input id="login-password" type="password" name="password" autocomplete="current-password" required />
+        </div>
+        <button class="btn btn-primary btn-block" type="submit">
+          <i class="ph ph-sign-in" aria-hidden="true"></i> Entrar
+        </button>
+      </form>
+
+      <p class="read-time" style="text-align:center">
+        ¿No tiene cuenta? <a href="/cuenta/registro">Cree una gratis</a>.
+      </p>
+      <p class="read-time" style="text-align:center">
+        ¿Necesita ayuda? Llame al {settings.help_phone}.
+      </p>
+    </div>
+  </div>
+</BaseLayout>

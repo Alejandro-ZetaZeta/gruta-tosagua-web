@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Pedir un anuncio · La Gruta</title>
+<link rel="stylesheet" href="style.css" />
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+</head>
+<body>
+<header class="top">
+  <div class="logo"><i class="ph ph-church" aria-hidden="true"></i></div>
+  <div class="brand"><b>La Gruta</b><span>Anuncios por megafonía</span></div>
+  <a class="btn btn-ghost btn-sm help" href="#"><i class="ph ph-phone" aria-hidden="true"></i><span>¿Necesita ayuda?</span></a>
+</header>
+
+<div class="layout">
+  <aside class="side">
+    <ol class="steps card" data-progress aria-label="Pasos">
+      <li>Tipo de anuncio</li>
+      <li>Su mensaje</li>
+      <li>Cuántas veces</li>
+      <li>Pago y comprobante</li>
+      <li>¡Listo!</li>
+    </ol>
+    <div class="card pad guide">
+      <h3>¿Cómo funciona?</h3>
+      <ul>
+        <li><i class="ph ph-megaphone" aria-hidden="true"></i><span>Su anuncio suena en tandas de la mañana y de la tarde.</span></li>
+        <li><i class="ph ph-coins" aria-hidden="true"></i><span><strong>$1.00</strong> por cada vez que suena.</span></li>
+        <li><i class="ph ph-user-check" aria-hidden="true"></i><span>La encargada revisa todo antes de emitirlo.</span></li>
+      </ul>
+    </div>
+  </aside>
+
+  <main>
+    <div class="mobile-progress" aria-hidden="true">
+      <div class="lbl"><span data-step-label>Paso 1 de 5</span><span>La Gruta</span></div>
+      <div class="track"><div data-bar></div></div>
+    </div>
+
+    <form class="card pad wizard" data-wizard onsubmit="return false">
+      <!-- Paso 1 -->
+      <section data-step>
+        <div class="step-head">
+          <span class="eyebrow">Paso 1</span>
+          <h2 tabindex="-1">¿Qué anuncio desea dar?</h2>
+          <p class="muted">Toque la opción que mejor describa su anuncio.</p>
+        </div>
+        <div class="choices" role="radiogroup" aria-label="Tipo de anuncio">
+          <label class="choice"><input type="radio" name="cat" checked /><span class="ico"><i class="ph ph-flower-lotus" aria-hidden="true"></i></span><b>Sepelio</b><span>Invitación a velorio o entierro</span></label>
+          <label class="choice"><input type="radio" name="cat" /><span class="ico"><i class="ph ph-church" aria-hidden="true"></i></span><b>Misa</b><span>Misa de difuntos, aniversario…</span></label>
+          <label class="choice"><input type="radio" name="cat" /><span class="ico"><i class="ph ph-hands-praying" aria-hidden="true"></i></span><b>Rezo</b><span>Novenas y rezos</span></label>
+          <label class="choice"><input type="radio" name="cat" /><span class="ico"><i class="ph ph-cake" aria-hidden="true"></i></span><b>Saludo</b><span>Cumpleaños y felicitaciones</span></label>
+          <label class="choice"><input type="radio" name="cat" /><span class="ico"><i class="ph ph-storefront" aria-hidden="true"></i></span><b>Promoción</b><span>Negocios y ventas</span></label>
+          <label class="choice"><input type="radio" name="cat" /><span class="ico"><i class="ph ph-megaphone-simple" aria-hidden="true"></i></span><b>Otro aviso</b><span>Cualquier otro anuncio</span></label>
+        </div>
+        <div class="actions"><button class="btn btn-primary" data-next>Continuar <i class="ph ph-arrow-right" aria-hidden="true"></i></button></div>
+      </section>
+
+      <!-- Paso 2 -->
+      <section data-step>
+        <div class="step-head">
+          <span class="eyebrow">Paso 2</span>
+          <h2 tabindex="-1">Cuéntenos su anuncio</h2>
+          <p class="muted">Escriba con sus palabras. Nosotros le ayudamos a dejarlo bonito y claro.</p>
+        </div>
+        <div class="fields">
+          <div class="field"><label for="n">Su nombre</label><input id="n" type="text" value="María Quispe" /></div>
+          <div class="field"><label for="t">Su teléfono</label><input id="t" type="tel" value="099 123 4567" /></div>
+          <div class="field full">
+            <label for="idea">¿Qué quiere que se diga?</label>
+            <span class="hint" id="idea-h">Ejemplo: quién, qué, dónde y a qué hora.</span>
+            <textarea id="idea" aria-describedby="idea-h">Falleció don José Quispe, el velorio es en su casa en la calle Bolívar y el entierro mañana a las 3 de la tarde</textarea>
+          </div>
+          <div class="field"><label for="d">¿Qué día debe sonar?</label><input id="d" type="date" value="2026-10-29" /></div>
+          <label class="check-card field" style="align-self:end"><input type="checkbox" checked /><span><b>Es urgente</b><br /><span class="muted">Sepelio o rezo de hoy: sale en la próxima tanda.</span></span></label>
+        </div>
+        <div class="ai" aria-live="polite">
+          <div class="ai-head"><i class="ph ph-sparkle" aria-hidden="true"></i> Así lo leerá la voz</div>
+          <blockquote>“Con profundo pesar, la familia Quispe comunica el fallecimiento de don José Quispe. Su velorio se realiza en su domicilio, en la calle Bolívar. El sepelio será mañana a las tres de la tarde. La familia agradece su compañía y oraciones.”</blockquote>
+          <div class="meta"><span class="pill"><i class="ph ph-timer" aria-hidden="true"></i> ≈ 25 segundos</span><span class="pill gold"><i class="ph ph-microphone" aria-hidden="true"></i> Voz serena</span></div>
+          <div class="row"><button class="btn btn-ghost btn-sm"><i class="ph ph-play" aria-hidden="true"></i> Escuchar ejemplo</button><button class="btn btn-ghost btn-sm"><i class="ph ph-pencil-simple" aria-hidden="true"></i> Cambiar texto</button></div>
+        </div>
+        <div class="actions"><button class="btn btn-ghost" data-prev><i class="ph ph-arrow-left" aria-hidden="true"></i> Atrás</button><button class="btn btn-primary" data-next>Continuar <i class="ph ph-arrow-right" aria-hidden="true"></i></button></div>
+      </section>
+
+      <!-- Paso 3 -->
+      <section data-step>
+        <div class="step-head">
+          <span class="eyebrow">Paso 3</span>
+          <h2 tabindex="-1">¿Cuántas veces debe sonar?</h2>
+          <p class="muted">Cada vez cuesta <strong>$1.00</strong>. Lo repartimos durante el día.</p>
+        </div>
+        <div class="stack">
+          <div class="counter" data-counter>
+            <button type="button" data-delta="-1" aria-label="Una vez menos">−</button>
+            <output aria-live="polite">3</output>
+            <button type="button" data-delta="1" aria-label="Una vez más">+</button>
+          </div>
+          <div class="total"><span>Total a pagar (<span data-emis>3 veces</span>)</span><strong data-total>$3.00</strong></div>
+          <div class="note"><i class="ph ph-clock" aria-hidden="true"></i><div><b>Horario aproximado para el jueves 29:</b><div class="times" style="margin-top:8px"><span>08:30</span><span>11:30</span><span>14:30</span></div></div></div>
+          <div class="note gold"><i class="ph ph-info" aria-hidden="true"></i><p>Si pide muchas veces y ya no alcanzan antes de las 18:30, le ofreceremos pasar el resto al día siguiente.</p></div>
+        </div>
+        <div class="actions"><button class="btn btn-ghost" data-prev><i class="ph ph-arrow-left" aria-hidden="true"></i> Atrás</button><button class="btn btn-primary" data-next>Ir a pagar <i class="ph ph-arrow-right" aria-hidden="true"></i></button></div>
+      </section>
+
+      <!-- Paso 4 -->
+      <section data-step>
+        <div class="step-head">
+          <span class="eyebrow">Paso 4</span>
+          <h2 tabindex="-1">Pague por transferencia</h2>
+          <p class="muted">Transfiera <strong data-total>$3.00</strong> y luego suba la foto del comprobante.</p>
+        </div>
+        <div class="two">
+          <div class="stack">
+            <div class="code">
+              <span>Escriba este código en el <strong>concepto</strong></span>
+              <b>GRU-4829</b>
+              <button type="button" class="btn btn-sm" data-copy="GRU-4829"><i class="ph ph-copy" aria-hidden="true"></i> Copiar código</button>
+            </div>
+            <dl class="bank">
+              <div><dt>Banco</dt><dd>Banco Pichincha</dd></div>
+              <div><dt>Cuenta de ahorros</dt><dd>2201 4455 66</dd></div>
+              <div><dt>A nombre de</dt><dd>Parroquia La Gruta</dd></div>
+              <div><dt>Monto exacto</dt><dd data-total>$3.00</dd></div>
+            </dl>
+          </div>
+          <div class="stack">
+            <div class="drop">
+              <span class="ico"><i class="ph ph-receipt" aria-hidden="true"></i></span>
+              <b>Suba la foto de su comprobante</b>
+              <span class="muted">Captura de pantalla, foto o PDF</span>
+              <button type="button" class="btn btn-gold" style="width:100%"><i class="ph ph-camera" aria-hidden="true"></i> Tomar foto</button>
+              <button type="button" class="btn btn-ghost" style="width:100%"><i class="ph ph-upload-simple" aria-hidden="true"></i> Elegir archivo</button>
+            </div>
+            <div class="note"><i class="ph ph-heart" aria-hidden="true"></i><p>¿La foto salió borrosa? No se preocupe: la encargada la revisará a mano.</p></div>
+          </div>
+        </div>
+        <div class="actions"><button class="btn btn-ghost" data-prev><i class="ph ph-arrow-left" aria-hidden="true"></i> Atrás</button><button class="btn btn-primary" data-next>Enviar pedido <i class="ph ph-paper-plane-tilt" aria-hidden="true"></i></button></div>
+      </section>
+
+      <!-- Paso 5 -->
+      <section data-step>
+        <div class="done-hero">
+          <div class="seal"><i class="ph ph-check-fat" aria-hidden="true"></i></div>
+          <h2 tabindex="-1">¡Recibimos su pedido!</h2>
+          <p class="muted">Guarde su código para consultar: <strong>GRU-4829</strong></p>
+        </div>
+        <ol class="timeline">
+          <li class="ok"><span class="dot"><i class="ph ph-check" aria-hidden="true"></i></span><div><b>Comprobante recibido</b><p class="muted">Hoy, 23:12</p></div></li>
+          <li class="now"><span class="dot"><i class="ph ph-hourglass-medium" aria-hidden="true"></i></span><div><b>La encargada lo está revisando</b><p class="muted">Normalmente toma menos de 1 hora en horario de atención.</p></div></li>
+          <li><span class="dot"><i class="ph ph-speaker-high" aria-hidden="true"></i></span><div><b>Su anuncio sonará <span data-emis>3 veces</span></b><p class="muted">Jueves 29 de octubre</p></div></li>
+        </ol>
+        <div class="actions"><button class="btn btn-ghost" data-goto="0"><i class="ph ph-plus" aria-hidden="true"></i> Pedir otro anuncio</button></div>
+      </section>
+    </form>
+  </main>
+</div>
+<script src="../shared/mock.js"></script>
+</body>
+</html>
+

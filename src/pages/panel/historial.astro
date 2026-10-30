@@ -1,0 +1,92 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { getHistory } from '../../lib/services/stats';
+import { formatDateLong, formatMoney } from '../../lib/time';
+import { CATEGORY_META, STATUS_META } from '../../lib/types';
+
+const adminEmail = Astro.locals.adminEmail ?? '';
+const q = (Astro.url.searchParams.get('q') ?? '').trim();
+const rows = await getHistory(q);
+---
+
+<AdminLayout title="Historial" active="history" adminEmail={adminEmail}>
+  <div class="page-title">
+    <span class="eyebrow">Pedidos anteriores</span>
+    <h1>Historial</h1>
+    <p class="muted">Pedidos aprobados, programados, emitidos y rechazados. Se muestran los últimos 200.</p>
+  </div>
+
+  <form class="card pad row" method="GET" action="/panel/historial" role="search">
+    <div class="field" style="flex:1;min-width:220px">
+      <label for="history-search">Buscar</label>
+      <input
+        id="history-search"
+        type="search"
+        name="q"
+        value={q}
+        placeholder="Código, nombre o teléfono"
+        autocomplete="off"
+      />
+    </div>
+    <button class="btn btn-primary btn-sm" type="submit" style="align-self:end">
+      <i class="ph ph-magnifying-glass" aria-hidden="true"></i> Buscar
+    </button>
+    {q && (
+      <a class="btn btn-ghost btn-sm" href="/panel/historial" style="align-self:end">Limpiar</a>
+    )}
+  </form>
+
+  <div class="card pad stack">
+    <div class="adm-head">
+      <h2 style="font-size:1.5rem">{q ? `Resultados para “${q}”` : 'Pedidos recientes'}</h2>
+      <span class="muted">{rows.length} {rows.length === 1 ? 'pedido' : 'pedidos'}</span>
+    </div>
+
+    {rows.length === 0 ? (
+      <p class="empty">No encontramos pedidos con esa búsqueda.</p>
+    ) : (
+      <div class="records">
+        {rows.map(({ order, payment }) => (
+          <div class="record">
+            <div class="grow">
+              <b>{order.order_code} · {order.client_name}</b>
+              <div class="sub">
+                {CATEGORY_META[order.category].label} · {formatDateLong(order.target_date)} ·{' '}
+                {order.total_emissions} {order.total_emissions === 1 ? 'vez' : 'veces'} · {order.client_phone}
+              </div>
+              {payment && (
+                <div class="sub">
+                  {payment.extracted_data?.banco ?? 'Banco no leído'} ·{' '}
+                  {payment.reference_number
+                    ? `N.º ${payment.reference_number}`
+                    : payment.validation_flags?.reference_value
+                      ? `N.º ${payment.validation_flags.reference_value}`
+                      : 'Sin n.º de comprobante'}{' '}
+                  · {payment.reconciled_at ? 'Conciliado' : 'Sin conciliar'}
+                </div>
+              )}
+              <details style="margin-top:6px">
+                <summary class="sub" style="cursor:pointer">Ver texto emitido</summary>
+                <p class="muted" style="margin-top:6px">{order.final_script ?? order.raw_idea}</p>
+              </details>
+            </div>
+            <span class="amount">{formatMoney(Number(order.amount_due))}</span>
+            <span class={`pill ${STATUS_META[order.status].pill}`}>
+              <i class={`ph ph-${STATUS_META[order.status].icon}`} aria-hidden="true"></i>
+              {STATUS_META[order.status].label}
+            </span>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+
+  <div class="row">
+    <a class="btn btn-ghost btn-sm" href="/panel">
+      <i class="ph ph-tray" aria-hidden="true"></i> Volver a revisar
+    </a>
+    <a class="btn btn-ghost btn-sm" href="/panel/cierre">
+      <i class="ph ph-list-checks" aria-hidden="true"></i> Cierre del día
+    </a>
+  </div>
+</AdminLayout>

@@ -1,0 +1,47 @@
+---
+interface Props {
+  current: number;
+}
+
+const { current } = Astro.props;
+const labels = [
+  'Tipo de anuncio',
+  'Su mensaje',
+  'Cuántas veces',
+  'Pago y comprobante',
+  '¡Listo!',
+];
+---
+
+<ol class="steps card" data-progress aria-label="Pasos del pedido">
+  {labels.map((label, index) => (
+    <li
+      class={index < current ? 'done' : undefined}
+      aria-current={index === current ? 'step' : undefined}
+      data-step-item={index}
+    >
+      {label}
+    </li>
+  ))}
+</ol>
+
+<div class="card pad guide">
+  <h3>¿Cómo funciona?</h3>
+  <ul>
+    <li>
+      <i class="ph ph-megaphone" aria-hidden="true"></i>
+      <span>Su anuncio suena en tandas de la mañana y de la tarde.</span>
+    </li>
+    <li>
+      <i class="ph ph-coins" aria-hidden="true"></i>
+      <span><strong>$1.00</strong> por cada vez que suena.</span>
+    </li>
+    <li>
+      <i class="ph ph-user-check" aria-hidden="true"></i>
+      <span>La encargada revisa todo antes de emitirlo.</span>
+    </li>
+  </ul>
+  <p style="margin-top:16px">
+    <a href="/seguimiento">Consultar un pedido anterior</a>
+  </p>
+</div>

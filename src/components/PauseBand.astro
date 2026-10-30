@@ -1,0 +1,59 @@
+---
+import type { Settings } from '../lib/types';
+import { formatClock } from '../lib/time';
+
+interface Props {
+  settings: Settings;
+  next: { time: string; count: number; seconds: number } | null;
+}
+
+const { settings, next } = Astro.props;
+---
+
+<section class:list={['pause', { 'is-paused': settings.is_paused }]} aria-live="polite" data-pause-band>
+  <span class="ico">
+    <i class="ph ph-speaker-high when-live" aria-hidden="true"></i>
+    <i class="ph ph-speaker-slash when-paused" aria-hidden="true"></i>
+  </span>
+  <div class="state">
+    <b class="when-live">Emisiones activas</b>
+    <b class="when-paused">Emisiones en pausa</b>
+    <span class="when-live">
+      {next
+        ? `Próxima tanda a las ${next.time} · ${next.count} ${next.count === 1 ? 'anuncio' : 'anuncios'} (${next.seconds} s)`
+        : `Sin tandas pendientes hoy · cierre a las ${formatClock(settings.close_time)}`}
+    </span>
+    <span class="when-paused">Nada sonará hasta que vuelva a activar.</span>
+  </div>
+  <label class="switch">
+    <span>Pausar todo</span>
+    <input
+      type="checkbox"
+      role="switch"
+      checked={settings.is_paused}
+      data-pause-input
+      aria-label="Pausar todas las emisiones"
+    />
+  </label>
+</section>
+
+<script>
+  import { actions } from 'astro:actions';
+
+  const input = document.querySelector<HTMLInputElement>('[data-pause-input]');
+  const band = document.querySelector<HTMLElement>('[data-pause-band]');
+
+  input?.addEventListener('change', async () => {
+    if (!input || !band) return;
+    const paused = input.checked;
+    band.classList.toggle('is-paused', paused);
+    input.disabled = true;
+    const { error } = await actions.adminSetPause({ paused });
+    input.disabled = false;
+    if (error) {
+      input.checked = !paused;
+      band.classList.toggle('is-paused', !paused);
+      window.alert(error.message ?? 'No pudimos cambiar la pausa.');
+    }
+  });
+</script>

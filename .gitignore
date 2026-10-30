@@ -1,0 +1,36 @@
+# build & deps
+node_modules/
+dist/
+.astro/
+
+# secrets
+.env
+.env.local
+.env*.local
+.insforge
+
+# player daemon local state
+player-daemon/data/
+player-daemon/audios_cache/
+*.db
+*.db-journal
+
+# os
+.DS_Store
+Thumbs.db
+
+# InsForge & AI agent skills
+.agent
+.agents
+.augment
+.claude
+.cline
+.github/copilot*
+.kilocode
+.qoder
+.qwen
+.roo
+.trae
+.windsurf
+
+player-daemon/.env

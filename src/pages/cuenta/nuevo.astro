@@ -1,0 +1,773 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import WizardSteps from '../../components/WizardSteps.astro';
+import { getSettings } from '../../lib/settings';
+import { verifySession, sessionCookie } from '../../lib/session';
+import { getProfile } from '../../lib/profiles';
+import { addDaysKey, formatClock, formatMoney, localDateKey, localMinutes, parseTimeToMinutes } from '../../lib/time';
+import { CATEGORIES, CATEGORY_META } from '../../lib/types';
+
+const settings = await getSettings();
+const session = verifySession(Astro.cookies.get(sessionCookie.name)?.value);
+if (!session) return Astro.redirect('/cuenta/login');
+const profile = await getProfile(session.userId);
+if (!profile) return Astro.redirect('/cuenta/login');
+
+const now = new Date();
+const today = localDateKey(now, settings.utc_offset_min);
+const closedToday = localMinutes(now, settings.utc_offset_min) >= parseTimeToMinutes(settings.cutoff_time);
+const firstDate = closedToday ? addDaysKey(today, 1) : today;
+
+const categories = CATEGORIES.map((key) => ({ key, ...CATEGORY_META[key] }));
+---
+
+<BaseLayout title="Pedir un anuncio">
+  <Header helpPhone={settings.help_phone} homeHref="/cuenta" />
+
+  <div class="layout">
+    <aside class="side">
+      <WizardSteps current={0} />
+    </aside>
+
+    <main>
+      <div class="mobile-progress" aria-hidden="true">
+        <div class="lbl"><span data-step-label>Paso 1 de 5</span><span>La Gruta</span></div>
+        <div class="track"><div data-bar style="width:20%"></div></div>
+      </div>
+
+      <div class="card pad wizard" data-wizard data-phone={settings.help_phone}>
+        <!-- Paso 1 -->
+        <section data-step data-step-index="0">
+          <div class="step-head">
+            <span class="eyebrow">Paso 1</span>
+            <h2 tabindex="-1">¿Qué anuncio desea dar?</h2>
+            <p class="muted">Toque la opción que mejor describa su anuncio.</p>
+          </div>
+
+          <div class="choices" role="radiogroup" aria-label="Tipo de anuncio">
+            {categories.map((category, index) => (
+              <label class="choice">
+                <input
+                  type="radio"
+                  name="category"
+                  value={category.key}
+                  checked={index === 0}
+                  data-default-voice={category.voice}
+                />
+                <span class="ico"><i class={`ph ph-${category.icon}`} aria-hidden="true"></i></span>
+                <b>{category.label}</b>
+                <span>{category.help}</span>
+              </label>
+            ))}
+          </div>
+
+          <div class="actions">
+            <button class="btn btn-primary" type="button" data-next>
+              Continuar <i class="ph ph-arrow-right" aria-hidden="true"></i>
+            </button>
+          </div>
+        </section>
+
+        <!-- Paso 2 -->
+        <section data-step data-step-index="1" hidden>
+          <div class="step-head">
+            <span class="eyebrow">Paso 2</span>
+            <h2 tabindex="-1">Cuéntenos su anuncio</h2>
+            <p class="muted">Escriba con sus palabras. Nosotros le ayudamos a dejarlo bonito y claro.</p>
+          </div>
+
+          <div class="fields">
+            <div class="field">
+              <label for="client-name">Su nombre</label>
+              <input id="client-name" type="text" name="clientName" autocomplete="name" data-field="name" value={profile?.display_name ?? ''} />
+              <span class="error" data-error="name" role="alert"></span>
+            </div>
+            <div class="field">
+              <label for="client-phone">Su teléfono</label>
+              <input
+                id="client-phone"
+                type="tel"
+                name="clientPhone"
+                inputmode="tel"
+                autocomplete="tel"
+                data-field="phone"
+                value={profile?.phone ?? ''}
+              />
+              <span class="error" data-error="phone" role="alert"></span>
+            </div>
+            <div class="field full">
+              <label for="raw-idea">¿Qué quiere que se diga?</label>
+              <span class="hint" id="idea-help">Ejemplo: quién, qué, dónde y a qué hora.</span>
+              <textarea id="raw-idea" name="rawIdea" aria-describedby="idea-help" data-field="idea"></textarea>
+              <span class="error" data-error="idea" role="alert"></span>
+            </div>
+            <div class="field">
+              <label for="target-date">¿Qué día debe sonar?</label>
+              <input id="target-date" type="date" name="targetDate" min={firstDate} value={firstDate} data-field="date" />
+              {closedToday && (
+                <span class="hint">Los pedidos de hoy ya cerraron. La primera fecha disponible es mañana.</span>
+              )}
+            </div>
+            <label class="check-card field" style="align-self:end">
+              <input type="checkbox" name="isUrgent" data-field="urgent" />
+              <span>
+                <b>Es urgente</b><br />
+                <span class="muted">Sepelio o rezo de hoy: sale en la próxima tanda.</span>
+              </span>
+            </label>
+          </div>
+
+          <div class="ai" data-ai-box aria-live="polite">
+            <div class="ai-head">
+              <i class="ph ph-sparkle" aria-hidden="true"></i> Así lo leerá la voz
+            </div>
+            <p class="muted" data-ai-placeholder>
+              Escriba su anuncio arriba. Al tocar “Continuar”, le mostraremos una propuesta que puede cambiar.
+            </p>
+            <div data-ai-content hidden>
+              <label class="sr-only" for="script-field">Texto que se leerá</label>
+              <textarea id="script-field" data-script-field maxlength="1800"></textarea>
+              <div class="meta" style="margin-top:12px">
+                <span class="pill" data-duration-pill>
+                  <i class="ph ph-timer" aria-hidden="true"></i> ≈ 0 segundos
+                </span>
+                <span class="pill gold" data-voice-pill>
+                  <i class="ph ph-microphone" aria-hidden="true"></i> Voz serena
+                </span>
+              </div>
+              <div class="row" style="margin-top:14px">
+                <button class="btn btn-ghost btn-sm" type="button" data-listen>
+                  <i class="ph ph-play" aria-hidden="true"></i> Escuchar una idea
+                </button>
+                <button class="btn btn-ghost btn-sm" type="button" data-regenerate>
+                  <i class="ph ph-arrow-clockwise" aria-hidden="true"></i> Volver a redactar
+                </button>
+              </div>
+              <p class="hint" style="margin-top:10px">
+                La voz final la elige la encargada. Puede corregir este texto aquí mismo.
+              </p>
+            </div>
+            <p class="error" data-ai-error role="alert"></p>
+          </div>
+
+          <div class="actions">
+            <button class="btn btn-ghost" type="button" data-prev>
+              <i class="ph ph-arrow-left" aria-hidden="true"></i> Atrás
+            </button>
+            <button class="btn btn-primary" type="button" data-next>
+              Continuar <i class="ph ph-arrow-right" aria-hidden="true"></i>
+            </button>
+          </div>
+        </section>
+
+        <!-- Paso 3 -->
+        <section data-step data-step-index="2" hidden>
+          <div class="step-head">
+            <span class="eyebrow">Paso 3</span>
+            <h2 tabindex="-1">¿Cuántas veces debe sonar?</h2>
+            <p class="muted">Cada vez cuesta <strong>$1.00</strong>. Lo repartimos durante el día.</p>
+          </div>
+
+          <div class="stack">
+            <div class="counter" data-counter data-max={settings.max_emissions}>
+              <button type="button" data-delta="-1" aria-label="Una vez menos">−</button>
+              <output aria-live="polite" data-quantity>1</output>
+              <button type="button" data-delta="1" aria-label="Una vez más">+</button>
+            </div>
+
+            <div class="total">
+              <span>Total a pagar (<span data-emissions>1 vez</span>)</span>
+              <strong data-total>{formatMoney(1)}</strong>
+            </div>
+
+            <div class="note">
+              <i class="ph ph-clock" aria-hidden="true"></i>
+              <div>
+                <b>Horario aproximado para <span data-date-label></span>:</b>
+                <div class="times" style="margin-top:8px" data-schedule-times>
+                  <span class="muted">Toque “Ver horarios” para calcularlos.</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="row">
+              <button class="btn btn-ghost btn-sm" type="button" data-preview-schedule>
+                <i class="ph ph-calendar-check" aria-hidden="true"></i> Ver horarios
+              </button>
+              <span class="read-time" data-schedule-status aria-live="polite"></span>
+            </div>
+
+            <div data-schedule-warning aria-live="polite"></div>
+
+            <div class="note gold">
+              <i class="ph ph-info" aria-hidden="true"></i>
+              <p>
+                Si pide muchas veces y ya no alcanzan antes de las {formatClock(settings.close_time)}, le
+                ofreceremos pasar el resto al día siguiente.
+              </p>
+            </div>
+          </div>
+
+          <p class="error" data-order-error role="alert" style="margin-top:16px"></p>
+
+          <div class="actions">
+            <button class="btn btn-ghost" type="button" data-prev>
+              <i class="ph ph-arrow-left" aria-hidden="true"></i> Atrás
+            </button>
+            <button class="btn btn-primary" type="button" data-next>
+              Ir a pagar <i class="ph ph-arrow-right" aria-hidden="true"></i>
+            </button>
+          </div>
+        </section>
+
+        <!-- Paso 4 -->
+        <section data-step data-step-index="3" hidden>
+          <div class="step-head">
+            <span class="eyebrow">Paso 4</span>
+            <h2 tabindex="-1">Pague por transferencia</h2>
+            <p class="muted">
+              Transfiera <strong data-amount>{formatMoney(1)}</strong> y luego suba la foto del comprobante.
+            </p>
+          </div>
+
+          <div class="two">
+            <div class="stack">
+              <div class="code">
+                <span>Escriba este código en el <strong>concepto</strong></span>
+                <b data-order-code>GRU-0000</b>
+                <button type="button" class="btn btn-sm" data-copy-code>
+                  <i class="ph ph-copy" aria-hidden="true"></i> Copiar código
+                </button>
+                <span class="sr-only" role="status" data-copy-status></span>
+              </div>
+
+              <dl class="bank">
+                <div><dt>Banco</dt><dd>{settings.bank_name}</dd></div>
+                <div><dt>Cuenta</dt><dd>{settings.bank_account}</dd></div>
+                <div><dt>A nombre de</dt><dd>{settings.bank_holder}</dd></div>
+                <div><dt>Monto exacto</dt><dd data-amount>{formatMoney(1)}</dd></div>
+              </dl>
+            </div>
+
+            <form
+              class="stack"
+              method="POST"
+              action="/api/receipts"
+              enctype="multipart/form-data"
+              data-receipt-form
+            >
+              <input type="hidden" name="orderCode" data-field-code />
+              <input type="hidden" name="phone" data-field-phone value="" />
+
+              <div class="drop">
+                <span class="ico"><i class="ph ph-receipt" aria-hidden="true"></i></span>
+                <b>Suba la foto de su comprobante</b>
+                <span class="muted">Captura de pantalla, foto o PDF</span>
+
+                <input
+                  id="receipt-camera"
+                  class="sr-only file-input"
+                  type="file"
+                  name="receipt"
+                  accept="image/*"
+                  capture="environment"
+                  data-file-camera
+                />
+                <label class="btn btn-gold btn-block" for="receipt-camera">
+                  <i class="ph ph-camera" aria-hidden="true"></i> Tomar foto
+                </label>
+
+                <input
+                  id="receipt-file"
+                  class="sr-only file-input"
+                  type="file"
+                  name="receipt"
+                  accept="image/*,application/pdf"
+                  data-file
+                />
+                <label class="btn btn-ghost btn-block" for="receipt-file">
+                  <i class="ph ph-upload-simple" aria-hidden="true"></i> Elegir archivo
+                </label>
+
+                <span class="hint" data-file-name aria-live="polite">Ningún archivo elegido todavía.</span>
+
+                <div class="field" style="width:100%;text-align:left">
+                  <label for="receipt-reference">
+                    N.º de comprobante <span class="muted">(si lo tiene)</span>
+                  </label>
+                  <input id="receipt-reference" name="reference" type="text" autocomplete="off" maxlength="40" />
+                </div>
+              </div>
+
+              <div class="note">
+                <i class="ph ph-heart" aria-hidden="true"></i>
+                <p>¿La foto salió borrosa? No se preocupe: la encargada la revisará a mano.</p>
+              </div>
+
+              <p class="error" data-upload-error role="alert"></p>
+
+              <div class="actions">
+                <button class="btn btn-ghost" type="button" data-prev>
+                  <i class="ph ph-arrow-left" aria-hidden="true"></i> Atrás
+                </button>
+                <button class="btn btn-primary" type="submit" data-submit>
+                  Enviar pedido <i class="ph ph-paper-plane-tilt" aria-hidden="true"></i>
+                </button>
+              </div>
+            </form>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+</BaseLayout>
+
+<script>
+  import { actions } from 'astro:actions';
+
+  const wizard = document.querySelector<HTMLElement>('[data-wizard]');
+  if (wizard) {
+    const steps = [...wizard.querySelectorAll<HTMLElement>('[data-step]')];
+    const stepLabel = document.querySelector<HTMLElement>('[data-step-label]');
+    const progressBar = document.querySelector<HTMLElement>('[data-bar]');
+    const stepItems = [...document.querySelectorAll<HTMLElement>('[data-step-item]')];
+    const maxEmissions = Number(document.querySelector<HTMLElement>('[data-counter]')?.dataset.max ?? 12);
+
+    const nameInput = wizard.querySelector<HTMLInputElement>('[data-field="name"]')!;
+    const phoneInput = wizard.querySelector<HTMLInputElement>('[data-field="phone"]')!;
+    const ideaInput = wizard.querySelector<HTMLTextAreaElement>('[data-field="idea"]')!;
+    const dateInput = wizard.querySelector<HTMLInputElement>('[data-field="date"]')!;
+    const urgentInput = wizard.querySelector<HTMLInputElement>('[data-field="urgent"]')!;
+    const scriptField = wizard.querySelector<HTMLTextAreaElement>('[data-script-field]')!;
+    const aiPlaceholder = wizard.querySelector<HTMLElement>('[data-ai-placeholder]')!;
+    const aiContent = wizard.querySelector<HTMLElement>('[data-ai-content]')!;
+    const aiError = wizard.querySelector<HTMLElement>('[data-ai-error]')!;
+    const durationPill = wizard.querySelector<HTMLElement>('[data-duration-pill]')!;
+    const voicePill = wizard.querySelector<HTMLElement>('[data-voice-pill]')!;
+    const quantityOutput = wizard.querySelector<HTMLOutputElement>('[data-quantity]')!;
+    const emissionsLabel = wizard.querySelector<HTMLElement>('[data-emissions]')!;
+    const totalLabels = [...wizard.querySelectorAll<HTMLElement>('[data-total]')];
+    const amountLabels = [...wizard.querySelectorAll<HTMLElement>('[data-amount]')];
+    const dateLabel = wizard.querySelector<HTMLElement>('[data-date-label]')!;
+    const scheduleTimes = wizard.querySelector<HTMLElement>('[data-schedule-times]')!;
+    const scheduleWarning = wizard.querySelector<HTMLElement>('[data-schedule-warning]')!;
+    const scheduleStatus = wizard.querySelector<HTMLElement>('[data-schedule-status]')!;
+    const orderError = wizard.querySelector<HTMLElement>('[data-order-error]')!;
+    const codeLabel = wizard.querySelector<HTMLElement>('[data-order-code]')!;
+    const codeInput = wizard.querySelector<HTMLInputElement>('[data-field-code]')!;
+    const phoneHidden = wizard.querySelector<HTMLInputElement>('[data-field-phone]')!;
+    const receiptForm = wizard.querySelector<HTMLFormElement>('[data-receipt-form]')!;
+    const uploadError = wizard.querySelector<HTMLElement>('[data-upload-error]')!;
+    const submitButton = wizard.querySelector<HTMLButtonElement>('[data-submit]')!;
+    const fileCamera = wizard.querySelector<HTMLInputElement>('[data-file-camera]')!;
+    const filePicker = wizard.querySelector<HTMLInputElement>('[data-file]')!;
+    const fileName = wizard.querySelector<HTMLElement>('[data-file-name]')!;
+
+    const state = {
+      step: 0,
+      category: 'FUNERAL',
+      voice: 'SOLEMN',
+      script: '',
+      scriptStale: true,
+      quantity: 1,
+      orderCode: '',
+      orderSnapshot: '',
+    };
+
+    const voiceLabels: Record<string, string> = {
+      SOLEMN: 'Voz serena',
+      CHEERFUL: 'Voz alegre',
+      NEUTRAL: 'Voz neutral',
+    };
+
+    const money = (value: number) => `$${value.toFixed(2)}`;
+    const secondsFor = (text: string) =>
+      Math.max(1, Math.ceil(text.trim().split(/\s+/).filter(Boolean).length / 2.5));
+    const formatDate = (key: string) => {
+      const [year, month, day] = key.split('-').map(Number);
+      const text = new Intl.DateTimeFormat('es-EC', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        timeZone: 'UTC',
+      }).format(new Date(Date.UTC(year!, month! - 1, day!)));
+      return text.charAt(0).toUpperCase() + text.slice(1);
+    };
+    const formatShort = (key: string) => {
+      const [year, month, day] = key.split('-').map(Number);
+      const text = new Intl.DateTimeFormat('es-EC', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        timeZone: 'UTC',
+      }).format(new Date(Date.UTC(year!, month! - 1, day!)));
+      return text.charAt(0).toUpperCase() + text.slice(1).replace(/\.$/, '');
+    };
+
+    const showStep = (index: number, focus = true) => {
+      state.step = Math.max(0, Math.min(steps.length - 1, index));
+      steps.forEach((step, i) => (step.hidden = i !== state.step));
+      if (stepLabel) stepLabel.textContent = `Paso ${state.step + 1} de 5`;
+      if (progressBar) progressBar.style.width = `${((state.step + 1) / 5) * 100}%`;
+      stepItems.forEach((item, i) => {
+        item.classList.toggle('done', i < state.step);
+        if (i === state.step) item.setAttribute('aria-current', 'step');
+        else item.removeAttribute('aria-current');
+      });
+      if (focus) {
+        const heading = steps[state.step]?.querySelector<HTMLElement>('h2');
+        heading?.focus({ preventScroll: true });
+      }
+      window.scrollTo(0, 0);
+    };
+
+    const setError = (key: string, message: string) => {
+      const target = wizard.querySelector<HTMLElement>(`[data-error="${key}"]`);
+      if (target) target.textContent = message;
+    };
+
+    const clearErrors = () => {
+      wizard.querySelectorAll<HTMLElement>('[data-error]').forEach((el) => (el.textContent = ''));
+    };
+
+    const validatePersonal = (): boolean => {
+      clearErrors();
+      let ok = true;
+      if (nameInput.value.trim().length < 2) {
+        setError('name', 'Escriba su nombre.');
+        ok = false;
+      }
+      if (phoneInput.value.replace(/\D/g, '').length < 7) {
+        setError('phone', 'Escriba un teléfono válido.');
+        ok = false;
+      }
+      if (ideaInput.value.trim().length < 10) {
+        setError('idea', 'Cuéntenos un poco más de su anuncio.');
+        ok = false;
+      }
+      const firstInvalid = wizard.querySelector<HTMLElement>('[data-error]:not(:empty)');
+      firstInvalid?.previousElementSibling?.scrollIntoView({ block: 'center' });
+      return ok;
+    };
+
+    const updateScriptPills = () => {
+      const seconds = secondsFor(state.script);
+      durationPill.innerHTML = `<i class="ph ph-timer" aria-hidden="true"></i> ≈ ${seconds} segundos`;
+      voicePill.innerHTML = `<i class="ph ph-microphone" aria-hidden="true"></i> ${voiceLabels[state.voice] ?? 'Voz neutral'}`;
+    };
+
+    const showScript = () => {
+      aiPlaceholder.hidden = true;
+      aiContent.hidden = false;
+      scriptField.value = state.script;
+      updateScriptPills();
+    };
+
+    const draft = async (): Promise<boolean> => {
+      aiError.textContent = '';
+      aiPlaceholder.hidden = false;
+      aiPlaceholder.textContent = 'Preparando una propuesta…';
+      const { data, error } = await actions.draftScript({
+        rawIdea: ideaInput.value.trim(),
+        category: state.category as 'FUNERAL',
+        clientName: nameInput.value.trim(),
+        targetDate: dateInput.value,
+      });
+      if (error || !data) {
+        aiError.textContent = error?.message ?? 'No pudimos preparar el texto. Escriba su anuncio como quiera.';
+        aiPlaceholder.textContent = 'Puede escribir su anuncio tal cual y seguir.';
+        state.script = ideaInput.value.trim();
+        state.scriptStale = false;
+        showScript();
+        return true;
+      }
+      state.script = data.script;
+      state.voice = data.voice;
+      state.scriptStale = false;
+      showScript();
+      await refreshSchedule(false);
+      return true;
+    };
+
+    const renderSchedule = (payload: {
+      times: Array<{ date: string; time: string }>;
+      spillover: number;
+      warning: string | null;
+      closeTime: string;
+      cutoffTime: string;
+    }) => {
+      if (payload.times.length === 0) {
+        scheduleTimes.innerHTML = '<span class="muted">No encontramos tandas libres.</span>';
+      } else {
+        const grouped = new Map<string, string[]>();
+        for (const item of payload.times) {
+          const list = grouped.get(item.date) ?? [];
+          list.push(item.time);
+          grouped.set(item.date, list);
+        }
+        scheduleTimes.innerHTML = [...grouped.entries()]
+          .map(
+            ([date, times]) =>
+              `<div style="margin-bottom:10px"><b style="font-size:.95rem">${formatShort(date)}</b><div class="times" style="margin-top:6px">${times
+                .map((time) => `<span>${time}</span>`)
+                .join('')}</div></div>`,
+          )
+          .join('');
+      }
+
+      if (payload.warning === 'CUTOFF_TODAY') {
+        scheduleWarning.innerHTML = `<div class="alert warn" style="margin-top:14px"><i class="ph ph-clock" aria-hidden="true"></i><span>Ya pasó la hora límite de hoy (${payload.cutoffTime}). Su anuncio saldría el día siguiente.</span></div>`;
+      } else if (payload.warning === 'NO_SPACE') {
+        scheduleWarning.innerHTML = `<div class="alert danger" style="margin-top:14px"><i class="ph ph-warning" aria-hidden="true"></i><span>No hay suficientes tandas esta semana. Llame a la encargada al ${wizard.dataset.phone ?? 'número de ayuda'}.</span></div>`;
+      } else if (payload.spillover > 0) {
+        scheduleWarning.innerHTML = `<div class="alert warn" style="margin-top:14px"><i class="ph ph-info" aria-hidden="true"></i><span>${payload.spillover} de las emisiones saldrían al día siguiente, porque ya no caben antes de las ${payload.closeTime}.</span></div>`;
+      } else {
+        scheduleWarning.innerHTML = '';
+      }
+    };
+
+    const refreshSchedule = async (announce = true) => {
+      const duration = state.script ? secondsFor(state.script) : 30;
+      if (announce) scheduleStatus.textContent = 'Calculando horarios…';
+      const { data, error } = await actions.previewSchedule({
+        targetDate: dateInput.value,
+        quantity: state.quantity,
+        durationSec: Math.min(120, Math.max(5, duration)),
+        urgent: urgentInput.checked,
+      });
+      if (error || !data) {
+        scheduleStatus.textContent = error?.message ?? 'No pudimos calcular los horarios.';
+        return;
+      }
+      scheduleStatus.textContent = '';
+      renderSchedule(data);
+    };
+
+    const updateQuantity = () => {
+      quantityOutput.textContent = String(state.quantity);
+      emissionsLabel.textContent = `${state.quantity} ${state.quantity === 1 ? 'vez' : 'veces'}`;
+      totalLabels.forEach((el) => (el.textContent = money(state.quantity)));
+      wizard.querySelectorAll<HTMLButtonElement>('[data-delta]').forEach((button) => {
+        const delta = Number(button.dataset.delta);
+        button.disabled = (delta < 0 && state.quantity <= 1) || (delta > 0 && state.quantity >= maxEmissions);
+      });
+    };
+
+    const currentSnapshot = () =>
+      JSON.stringify({
+        category: state.category,
+        name: nameInput.value.trim(),
+        phone: phoneInput.value.replace(/\D/g, ''),
+        idea: ideaInput.value.trim(),
+        script: state.script.trim(),
+        voice: state.voice,
+        quantity: state.quantity,
+        date: dateInput.value,
+        urgent: urgentInput.checked,
+      });
+
+    const createOrder = async (): Promise<boolean> => {
+      orderError.textContent = '';
+      if (state.orderCode && state.orderSnapshot === currentSnapshot()) {
+        showStep(3);
+        return true;
+      }
+      const nextButton = wizard.querySelector<HTMLButtonElement>('[data-step-index="2"] [data-next]');
+      if (nextButton) {
+        nextButton.disabled = true;
+        nextButton.textContent = 'Preparando el código…';
+      }
+      const { data, error } = await actions.createOrder({
+        clientName: nameInput.value.trim(),
+        clientPhone: phoneInput.value.trim(),
+        category: state.category as 'FUNERAL',
+        rawIdea: ideaInput.value.trim(),
+        finalScript: state.script.trim(),
+        voice: state.voice as 'SOLEMN',
+        totalEmissions: state.quantity,
+        targetDate: dateInput.value,
+        isUrgent: urgentInput.checked,
+        website: '',
+      });
+      if (nextButton) {
+        nextButton.disabled = false;
+        nextButton.innerHTML = 'Ir a pagar <i class="ph ph-arrow-right" aria-hidden="true"></i>';
+      }
+      if (error || !data) {
+        orderError.textContent = error?.message ?? 'No pudimos preparar el pedido. Intente de nuevo.';
+        return false;
+      }
+
+      state.orderCode = data.orderCode;
+      state.orderSnapshot = currentSnapshot();
+      codeLabel.textContent = data.orderCode;
+      codeInput.value = data.orderCode;
+      phoneHidden.value = phoneInput.value.trim();
+      amountLabels.forEach((el) => (el.textContent = money(data.amount)));
+      orderError.textContent = '';
+      showStep(3);
+      return true;
+    };
+
+    // Navegación
+    wizard.querySelector<HTMLElement>('[data-step-index="0"] [data-next]')?.addEventListener('click', () => showStep(1));
+    wizard.querySelector<HTMLElement>('[data-step-index="1"] [data-prev]')?.addEventListener('click', () => showStep(0));
+
+    wizard.querySelector<HTMLElement>('[data-step-index="1"] [data-next]')?.addEventListener('click', async (event) => {
+      const button = event.currentTarget as HTMLButtonElement;
+      if (!validatePersonal()) return;
+      button.disabled = true;
+      const original = button.innerHTML;
+      button.textContent = 'Preparando su texto…';
+      if (!state.script || state.scriptStale) await draft();
+      button.disabled = false;
+      button.innerHTML = original;
+      if (state.script) showStep(2);
+    });
+
+    wizard.querySelector<HTMLElement>('[data-step-index="2"] [data-prev]')?.addEventListener('click', () => showStep(1));
+    wizard.querySelector<HTMLElement>('[data-step-index="2"] [data-next]')?.addEventListener('click', () => createOrder());
+    wizard.querySelector<HTMLElement>('[data-step-index="3"] [data-prev]')?.addEventListener('click', () => showStep(2));
+
+    // Tipo de anuncio
+    wizard.querySelectorAll<HTMLInputElement>('input[name="category"]').forEach((input) => {
+      input.addEventListener('change', () => {
+        state.category = input.value;
+        state.voice = input.dataset.defaultVoice ?? 'NEUTRAL';
+        state.script = '';
+        state.scriptStale = true;
+        aiContent.hidden = true;
+        aiPlaceholder.hidden = false;
+        aiPlaceholder.textContent = 'Escriba su anuncio arriba. Al tocar “Continuar”, le mostraremos una propuesta que puede cambiar.';
+      });
+    });
+
+    ideaInput.addEventListener('input', () => {
+      state.scriptStale = true;
+    });
+
+    dateInput.addEventListener('change', () => {
+      dateLabel.textContent = formatDate(dateInput.value);
+      void refreshSchedule(false);
+    });
+
+    urgentInput.addEventListener('change', () => {
+      void refreshSchedule(false);
+    });
+
+    quantityOutput.parentElement?.querySelectorAll<HTMLButtonElement>('[data-delta]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const delta = Number(button.dataset.delta);
+        state.quantity = Math.max(1, Math.min(maxEmissions, state.quantity + delta));
+        updateQuantity();
+        void refreshSchedule(false);
+      });
+    });
+
+    wizard.querySelector<HTMLButtonElement>('[data-preview-schedule]')?.addEventListener('click', () => refreshSchedule(true));
+
+    scriptField.addEventListener('input', () => {
+      state.script = scriptField.value;
+      state.scriptStale = false;
+      updateScriptPills();
+    });
+
+    wizard.querySelector<HTMLButtonElement>('[data-regenerate]')?.addEventListener('click', () => {
+      state.scriptStale = true;
+      void draft();
+    });
+
+    wizard.querySelector<HTMLButtonElement>('[data-listen]')?.addEventListener('click', () => {
+      if (!('speechSynthesis' in window)) return;
+      const utterance = new SpeechSynthesisUtterance(scriptField.value);
+      utterance.lang = 'es-EC';
+      utterance.rate = 0.92;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
+    });
+
+    // Copiar código
+    wizard.querySelector<HTMLButtonElement>('[data-copy-code]')?.addEventListener('click', async (event) => {
+      const button = event.currentTarget as HTMLButtonElement;
+      const status = wizard.querySelector<HTMLElement>('[data-copy-status]');
+      try {
+        await navigator.clipboard.writeText(state.orderCode);
+        if (status) status.textContent = 'Código copiado.';
+        const original = button.innerHTML;
+        button.innerHTML = '<i class="ph ph-check" aria-hidden="true"></i> ¡Copiado!';
+        window.setTimeout(() => (button.innerHTML = original), 2200);
+      } catch {
+        if (status) status.textContent = `El código es ${state.orderCode}.`;
+      }
+    });
+
+    // Archivos
+    const selectedFile = (): File | null => {
+      const fromCamera = fileCamera.files?.[0];
+      if (fromCamera && fromCamera.size > 0) return fromCamera;
+      const fromPicker = filePicker.files?.[0];
+      if (fromPicker && fromPicker.size > 0) return fromPicker;
+      return null;
+    };
+
+    const refreshFileName = () => {
+      const file = selectedFile();
+      fileName.textContent = file ? file.name : 'Ningún archivo elegido todavía.';
+    };
+
+    fileCamera.addEventListener('change', () => {
+      if (fileCamera.files?.length) filePicker.value = '';
+      refreshFileName();
+    });
+    filePicker.addEventListener('change', () => {
+      if (filePicker.files?.length) fileCamera.value = '';
+      refreshFileName();
+    });
+
+    receiptForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      uploadError.textContent = '';
+      const file = selectedFile();
+      if (!file) {
+        uploadError.textContent = 'Elija una foto o un PDF de su comprobante.';
+        return;
+      }
+
+      submitButton.disabled = true;
+      submitButton.textContent = 'Enviando…';
+      const body = new FormData(receiptForm);
+      body.delete('receipt');
+      body.append('receipt', file);
+
+      try {
+        const response = await fetch('/api/receipts', {
+          method: 'POST',
+          body,
+          headers: { Accept: 'application/json' },
+        });
+        const payload = (await response.json().catch(() => ({}))) as {
+          ok?: boolean;
+          error?: string;
+          orderCode?: string;
+        };
+        if (!response.ok || !payload.ok) {
+          uploadError.textContent = payload.error ?? 'No pudimos recibir el comprobante. Intente de nuevo.';
+          submitButton.disabled = false;
+          submitButton.innerHTML = 'Enviar pedido <i class="ph ph-paper-plane-tilt" aria-hidden="true"></i>';
+          return;
+        }
+        window.location.href = `/gracias?codigo=${encodeURIComponent(payload.orderCode ?? state.orderCode)}`;
+      } catch {
+        uploadError.textContent = 'Se cortó la conexión. Revise su internet e intente otra vez.';
+        submitButton.disabled = false;
+        submitButton.innerHTML = 'Enviar pedido <i class="ph ph-paper-plane-tilt" aria-hidden="true"></i>';
+      }
+    });
+
+    // Inicio
+    dateLabel.textContent = formatDate(dateInput.value);
+    updateQuantity();
+    showStep(0, false);
+  }
+</script>

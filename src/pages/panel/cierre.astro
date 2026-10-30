@@ -1,0 +1,140 @@
+---
+import { actions } from 'astro:actions';
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { getSettings } from '../../lib/settings';
+import { getReconciliation } from '../../lib/services/stats';
+import { signedUrls } from '../../lib/services/payments';
+import { friendlyError } from '../../lib/errors';
+import { formatDateLong, formatMoney, formatTime, localDateKey } from '../../lib/time';
+import { CATEGORY_META } from '../../lib/types';
+
+const adminEmail = Astro.locals.adminEmail ?? '';
+const settings = await getSettings();
+const today = localDateKey(new Date(), settings.utc_offset_min);
+const rows = await getReconciliation(settings, today);
+const receiptLinks = await signedUrls(
+  'receipts',
+  rows.map((row) => row.receiptKey).filter((key): key is string => Boolean(key)),
+);
+
+const result = Astro.getActionResult(actions.adminReconcile);
+if (result?.data?.ok) return Astro.redirect('/panel/cierre?guardado=1');
+
+const total = rows.reduce((sum, row) => sum + row.amount, 0);
+const reconciled = rows.filter((row) => row.reconciled).length;
+const pending = rows.length - reconciled;
+const missing = rows.filter((row) => !row.paymentId).length;
+const saved = Astro.url.searchParams.get('guardado') === '1';
+---
+
+<AdminLayout title="Cierre del día" active="close" adminEmail={adminEmail}>
+  <div class="page-title">
+    <span class="eyebrow">{formatDateLong(today)}</span>
+    <h1>Cierre del día</h1>
+    <p class="muted">
+      Compare cada emisión con el comprobante y la app del banco. Marque la casilla cuando coincida.
+    </p>
+  </div>
+
+  {saved && (
+    <div class="alert ok">
+      <i class="ph ph-check-circle" aria-hidden="true"></i>
+      <span>Conciliación guardada.</span>
+    </div>
+  )}
+  {result?.error && (
+    <div class="alert danger">
+      <i class="ph ph-warning" aria-hidden="true"></i>
+      <span>{friendlyError(result?.error)}</span>
+    </div>
+  )}
+  {missing > 0 && (
+    <div class="alert warn">
+      <i class="ph ph-warning" aria-hidden="true"></i>
+      <span>
+        {missing} {missing === 1 ? 'emisión no tiene comprobante asociado' : 'emisiones no tienen comprobante asociado'}.
+        Búsquelas en el historial o con la encargada.
+      </span>
+    </div>
+  )}
+
+  <div class="kpis">
+    <div class="card kpi"><b>{rows.length}</b><span>Emitidos hoy</span></div>
+    <div class="card kpi"><b>{reconciled}</b><span>Conciliados</span></div>
+    <div class="card kpi"><b>{pending}</b><span>Por conciliar</span></div>
+    <div class="card kpi"><b>{formatMoney(total)}</b><span>Total del día</span></div>
+  </div>
+
+  <div class="card pad stack">
+    <div class="adm-head">
+      <h2 style="font-size:1.5rem">Emisiones de hoy</h2>
+      <span class="muted">Marque para conciliar contra el banco</span>
+    </div>
+
+    {rows.length === 0 ? (
+      <p class="empty">Todavía no se registraron emisiones hoy.</p>
+    ) : (
+      <div class="records">
+        {rows.map((row) => (
+          <div class:list={['record', { reconciled: row.reconciled }]}>
+            <div class="grow">
+              <b>
+                {formatTime(row.playedAt, settings.utc_offset_min)} · {row.orderCode} · {row.clientName}
+              </b>
+              <div class="sub">
+                {CATEGORY_META[row.category].short} · {row.bank ?? 'Banco no leído'} ·{' '}
+                {(row.reference ?? row.referenceValue)
+                  ? `N.º ${row.reference ?? row.referenceValue}`
+                  : 'Sin n.º de comprobante'}
+              </div>
+              {row.receiptKey && receiptLinks.get(row.receiptKey) && (
+                <a
+                  class="read-time"
+                  href={receiptLinks.get(row.receiptKey)}
+                  target="_blank"
+                  rel="noopener"
+                >
+                  Ver comprobante
+                </a>
+              )}
+            </div>
+            <span class="amount">{formatMoney(row.amount)}</span>
+            {row.paymentId ? (
+              <form method="POST" action={actions.adminReconcile} data-reconcile>
+                <input type="hidden" name="paymentId" value={row.paymentId} />
+                <label class="check">
+                  <input type="checkbox" name="reconciled" checked={row.reconciled} />
+                  Conciliado
+                </label>
+                <noscript>
+                  <button class="btn btn-ghost btn-sm" type="submit">Guardar</button>
+                </noscript>
+              </form>
+            ) : (
+              <span class="pill warn">
+                <i class="ph ph-receipt" aria-hidden="true"></i> Sin comprobante
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+
+  <div class="row">
+    <a class="btn btn-ghost btn-sm" href="/panel/tandas">
+      <i class="ph ph-calendar-check" aria-hidden="true"></i> Ver tandas
+    </a>
+    <a class="btn btn-ghost btn-sm" href="/panel/historial">
+      <i class="ph ph-archive" aria-hidden="true"></i> Historial
+    </a>
+  </div>
+</AdminLayout>
+
+<script>
+  document.querySelectorAll<HTMLFormElement>('form[data-reconcile]').forEach((form) => {
+    form.querySelector<HTMLInputElement>('input[type="checkbox"]')?.addEventListener('change', () => {
+      form.requestSubmit();
+    });
+  });
+</script>

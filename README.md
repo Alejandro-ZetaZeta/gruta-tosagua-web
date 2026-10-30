@@ -74,7 +74,7 @@ npm run build
 npm start
 ```
 
-Variables requeridas en el servidor: `INSFORGE_URL`, `INSFORGE_API_KEY`, `INSFORGE_ANON_KEY`, `SESSION_SECRET`, `PLAYER_TOKEN`. Opcionales: `OPENROUTER_API_KEY`, `OPENROUTER_TEXT_MODEL`, `OPENROUTER_VISION_MODEL`, `PUBLIC_SITE_URL`. `ADMIN_EMAIL` solo lo usan los scripts de administración como correo sugerido; no autoriza a nadie por sí solo.
+Variables requeridas en el servidor: `INSFORGE_URL`, `INSFORGE_API_KEY`, `INSFORGE_ANON_KEY`, `SESSION_SECRET`, `PLAYER_TOKEN`. Recomendada: `UTC_OFFSET_MIN` (-300 para Ecuador; se usa para mostrar fechas/horas). Opcionales: `OPENROUTER_API_KEY`, `OPENROUTER_TEXT_MODEL`, `OPENROUTER_VISION_MODEL`, `PUBLIC_SITE_URL`. `ADMIN_EMAIL` solo lo usan los scripts de administración como correo sugerido; no autoriza a nadie por sí solo.
 
 El sitio necesita HTTPS para que la cámara del teléfono funcione (o `localhost` en pruebas). El reproductor usa la URL pública del sitio.
 

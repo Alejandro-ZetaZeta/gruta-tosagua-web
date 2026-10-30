@@ -17,7 +17,6 @@ interface ImportMetaEnv {
   readonly OPENROUTER_API_KEY?: string;
   readonly OPENROUTER_TEXT_MODEL?: string;
   readonly OPENROUTER_VISION_MODEL?: string;
-  readonly APP_TIMEZONE?: string;
   readonly UTC_OFFSET_MIN?: string;
   readonly PUBLIC_SITE_URL?: string;
 }

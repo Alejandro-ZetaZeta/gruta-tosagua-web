@@ -62,14 +62,24 @@ if (existing) {
             <label for="reg-email">Correo electrónico</label>
             <input id="reg-email" type="email" name="email" autocomplete="email" required />
           </div>
-          <div class="field">
+          <div class="field" style="align-content: start">
             <label for="reg-password">Contraseña</label>
-            <input id="reg-password" type="password" name="password" autocomplete="new-password" minlength="8" required />
+            <div class="password-wrap">
+              <input id="reg-password" type="password" name="password" autocomplete="new-password" minlength="8" required />
+              <button type="button" class="toggle-password" data-target="reg-password" aria-label="Mostrar contraseña" aria-pressed="false">
+                <i class="ph ph-eye" aria-hidden="true"></i>
+              </button>
+            </div>
             <span class="hint">Mínimo 8 caracteres.</span>
           </div>
-          <div class="field">
+          <div class="field" style="align-content: start">
             <label for="reg-confirm">Repita la contraseña</label>
-            <input id="reg-confirm" type="password" name="confirmPassword" autocomplete="new-password" minlength="8" required />
+            <div class="password-wrap">
+              <input id="reg-confirm" type="password" name="confirmPassword" autocomplete="new-password" minlength="8" required />
+              <button type="button" class="toggle-password" data-target="reg-confirm" aria-label="Mostrar contraseña" aria-pressed="false">
+                <i class="ph ph-eye" aria-hidden="true"></i>
+              </button>
+            </div>
           </div>
         </div>
         <button class="btn btn-primary btn-block" type="submit">
@@ -86,3 +96,62 @@ if (existing) {
     </div>
   </div>
 </BaseLayout>
+
+<style>
+  .password-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+  }
+  .password-wrap input {
+    padding-right: 48px;
+  }
+  .toggle-password {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: 10px;
+    color: var(--color-muted, #6B6258);
+    font-size: 1.35rem;
+    cursor: pointer;
+    transition: color 0.15s, background-color 0.15s;
+  }
+  .toggle-password:hover {
+    color: var(--color-ink, #1F1633);
+    background-color: rgba(0, 0, 0, 0.04);
+  }
+  .toggle-password:focus-visible {
+    outline: 2px solid var(--color-primary, #3B1F7A);
+    outline-offset: -2px;
+  }
+</style>
+
+<script>
+  document.querySelectorAll<HTMLButtonElement>('.toggle-password').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.getAttribute('data-target');
+      if (!targetId) return;
+      const input = document.getElementById(targetId) as HTMLInputElement | null;
+      if (!input) return;
+
+      const isPassword = input.type === 'password';
+      input.type = isPassword ? 'text' : 'password';
+      btn.setAttribute('aria-pressed', String(isPassword));
+      btn.setAttribute('aria-label', isPassword ? 'Ocultar contraseña' : 'Mostrar contraseña');
+
+      const icon = btn.querySelector('i');
+      if (icon) {
+        icon.className = isPassword ? 'ph ph-eye-slash' : 'ph ph-eye';
+      }
+    });
+  });
+</script>

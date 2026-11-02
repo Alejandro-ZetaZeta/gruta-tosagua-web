@@ -90,6 +90,14 @@
   .btn-danger:hover:not(:disabled) { background: var(--color-danger-soft); }
   .btn-sm { min-height: 48px; padding: 0 16px; font-size: 1rem; border-radius: 12px; }
   .btn-block { width: 100%; }
+  .btn-google { background: #fff; color: #1F1F1F; border-color: var(--color-line); }
+  .btn-google:hover:not(:disabled) { background: #F7F7F7; }
+  .btn-google img { width: 20px; height: 20px; flex: none; }
+  .divider {
+    display: flex; align-items: center; gap: 12px;
+    color: var(--color-muted); font-weight: 700; font-size: .95rem;
+  }
+  .divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--color-line); }
   .btn[aria-busy="true"] { pointer-events: none; opacity: .7; }
 
   /* ---------- Distribución cliente ---------- */
@@ -295,10 +303,11 @@
   .actions .btn-primary { margin-left: auto; min-width: 220px; }
 
   /* ---------- Panel ---------- */
-  .admin { display: grid; grid-template-columns: 260px 1fr; min-height: calc(100vh - 77px); }
+  .admin { display: grid; grid-template-columns: 260px 1fr; align-items: start; min-height: calc(100vh - 77px); }
   .nav {
     background: var(--color-ink); color: #EDE9F6; padding: 24px 16px;
     display: flex; flex-direction: column; gap: 6px;
+    position: sticky; top: 77px; height: calc(100vh - 77px); overflow-y: auto;
   }
   .nav a {
     display: flex; align-items: center; gap: 12px; min-height: 52px;
@@ -467,6 +476,11 @@
   .record .check { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; }
   .record .check input { width: 28px; height: 28px; accent-color: var(--color-ok); }
   .record.reconciled { background: #FAFDF9; }
+  .link-btn {
+    display: inline-flex; align-items: center; gap: 6px; padding: 0; border: 0;
+    background: none; font: inherit; color: var(--color-primary); cursor: pointer;
+    text-decoration: underline; text-underline-offset: 3px;
+  }
 
   /* ---------- Login ---------- */
   .login-wrap {

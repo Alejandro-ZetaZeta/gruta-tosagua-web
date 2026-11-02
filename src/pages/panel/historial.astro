@@ -1,12 +1,17 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import { getHistory } from '../../lib/services/stats';
-import { formatDateLong, formatMoney } from '../../lib/time';
+import { signedUrls } from '../../lib/services/payments';
+import { formatDateLong, formatDateTime, formatMoney } from '../../lib/time';
 import { CATEGORY_META, STATUS_META } from '../../lib/types';
 
 const adminEmail = Astro.locals.adminEmail ?? '';
 const q = (Astro.url.searchParams.get('q') ?? '').trim();
 const rows = await getHistory(q);
+const receiptLinks = await signedUrls(
+  'receipts',
+  rows.map(({ payment }) => payment?.receipt_key).filter((key): key is string => Boolean(key)),
+);
 ---
 
 <AdminLayout title="Historial" active="history" adminEmail={adminEmail}>
@@ -46,37 +51,61 @@ const rows = await getHistory(q);
       <p class="empty">No encontramos pedidos con esa búsqueda.</p>
     ) : (
       <div class="records">
-        {rows.map(({ order, payment }) => (
-          <div class="record">
-            <div class="grow">
-              <b>{order.order_code} · {order.client_name}</b>
-              <div class="sub">
-                {CATEGORY_META[order.category].label} · {formatDateLong(order.target_date)} ·{' '}
-                {order.total_emissions} {order.total_emissions === 1 ? 'vez' : 'veces'} · {order.client_phone}
-              </div>
-              {payment && (
+        {rows.map(({ order, payment }) => {
+          const receiptUrl = payment?.receipt_key ? receiptLinks.get(payment.receipt_key) ?? null : null;
+          const isPdf = payment?.receipt_key?.toLowerCase().endsWith('.pdf') ?? false;
+          return (
+            <div class="record">
+              <div class="grow">
+                <b>{order.order_code} · {order.client_name}</b>
                 <div class="sub">
-                  {payment.extracted_data?.banco ?? 'Banco no leído'} ·{' '}
-                  {payment.reference_number
-                    ? `N.º ${payment.reference_number}`
-                    : payment.validation_flags?.reference_value
-                      ? `N.º ${payment.validation_flags.reference_value}`
-                      : 'Sin n.º de comprobante'}{' '}
-                  · {payment.reconciled_at ? 'Conciliado' : 'Sin conciliar'}
+                  {CATEGORY_META[order.category].label} · {formatDateLong(order.target_date)} ·{' '}
+                  {order.total_emissions} {order.total_emissions === 1 ? 'vez' : 'veces'} · {order.client_phone}
                 </div>
-              )}
-              <details style="margin-top:6px">
-                <summary class="sub" style="cursor:pointer">Ver texto emitido</summary>
-                <p class="muted" style="margin-top:6px">{order.final_script ?? order.raw_idea}</p>
-              </details>
+                {payment && (
+                  <div class="sub">
+                    {payment.extracted_data?.banco ?? 'Banco no leído'} ·{' '}
+                    {payment.reference_number
+                      ? `N.º ${payment.reference_number}`
+                      : payment.validation_flags?.reference_value
+                        ? `N.º ${payment.validation_flags.reference_value}`
+                        : 'Sin n.º de comprobante'}{' '}
+                    · {payment.reconciled_at ? 'Conciliado' : 'Sin conciliar'}
+                  </div>
+                )}
+                <div class="sub">
+                  Pedido creado el {formatDateTime(order.created_at)}
+                  {order.approved_at && ` · Aprobado el ${formatDateTime(order.approved_at)}`}
+                </div>
+                {receiptUrl && !isPdf && (
+                  <button
+                    type="button"
+                    class="link-btn"
+                    data-receipt-open
+                    data-receipt-url={receiptUrl}
+                    aria-label={`Ver comprobante de ${order.order_code}`}
+                  >
+                    <i class="ph ph-receipt" aria-hidden="true"></i> Ver comprobante
+                  </button>
+                )}
+                {receiptUrl && isPdf && (
+                  <a class="link-btn" href={receiptUrl} target="_blank" rel="noopener">
+                    <i class="ph ph-file-pdf" aria-hidden="true"></i> Ver comprobante (PDF)
+                  </a>
+                )}
+                <details style="margin-top:6px">
+                  <summary class="sub" style="cursor:pointer">Ver texto emitido</summary>
+                  <p class="muted" style="margin-top:6px">{order.final_script ?? order.raw_idea}</p>
+                </details>
+              </div>
+              <span class="amount">{formatMoney(Number(order.amount_due))}</span>
+              <span class={`pill ${STATUS_META[order.status].pill}`}>
+                <i class={`ph ph-${STATUS_META[order.status].icon}`} aria-hidden="true"></i>
+                {STATUS_META[order.status].label}
+              </span>
             </div>
-            <span class="amount">{formatMoney(Number(order.amount_due))}</span>
-            <span class={`pill ${STATUS_META[order.status].pill}`}>
-              <i class={`ph ph-${STATUS_META[order.status].icon}`} aria-hidden="true"></i>
-              {STATUS_META[order.status].label}
-            </span>
-          </div>
-        ))}
+          );
+        })}
       </div>
     )}
   </div>
@@ -89,4 +118,29 @@ const rows = await getHistory(q);
       <i class="ph ph-list-checks" aria-hidden="true"></i> Cierre del día
     </a>
   </div>
+
+  <dialog id="receipt-dialog" aria-label="Comprobante ampliado">
+    <button type="button" class="dialog-close" data-receipt-close aria-label="Cerrar">
+      <i class="ph ph-x" aria-hidden="true"></i>
+    </button>
+    <img alt="Comprobante ampliado" />
+  </dialog>
 </AdminLayout>
+
+<script>
+  const dialog = document.getElementById('receipt-dialog') as HTMLDialogElement | null;
+  const dialogImg = dialog?.querySelector('img');
+
+  document.querySelectorAll<HTMLButtonElement>('[data-receipt-open]').forEach((button) => {
+    button.addEventListener('click', () => {
+      if (!dialog || !dialogImg) return;
+      dialogImg.src = button.dataset.receiptUrl ?? '';
+      dialog.showModal();
+    });
+  });
+
+  document.querySelector('[data-receipt-close]')?.addEventListener('click', () => dialog?.close());
+  dialog?.addEventListener('click', (event) => {
+    if (event.target === dialog) dialog.close();
+  });
+</script>

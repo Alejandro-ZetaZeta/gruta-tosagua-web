@@ -37,7 +37,7 @@ const saved = Astro.url.searchParams.get('guardado') === '1';
   </div>
 
   {saved && (
-    <div class="alert ok">
+    <div class="alert ok" data-autodismiss>
       <i class="ph ph-check-circle" aria-hidden="true"></i>
       <span>Conciliación guardada.</span>
     </div>

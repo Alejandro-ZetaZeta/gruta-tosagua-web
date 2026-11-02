@@ -6,11 +6,11 @@ reset_password_method = "code"
 disable_signup = false
 
 [auth.password]
-min_length = 6
-require_number = false
-require_lowercase = false
-require_uppercase = false
-require_special_char = false
+min_length = 12
+require_number = true
+require_lowercase = true
+require_uppercase = true
+require_special_char = true
 
 [auth.smtp]
 enabled = false

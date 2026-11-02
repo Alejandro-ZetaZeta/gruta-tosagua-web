@@ -18,7 +18,7 @@ const result = Astro.getActionResult(actions.adminSaveSettings);
   </div>
 
   {result?.data?.ok && (
-    <div class="alert ok">
+    <div class="alert ok" data-autodismiss>
       <i class="ph ph-check-circle" aria-hidden="true"></i>
       <span>Cambios guardados.</span>
     </div>

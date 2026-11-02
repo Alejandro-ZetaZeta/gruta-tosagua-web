@@ -76,7 +76,7 @@ function queuePill(item: (typeof queue)[number]): { cls: string; label: string; 
       </div>
 
       {approvedCode && (
-        <div class="alert ok">
+        <div class="alert ok" data-autodismiss>
           <i class="ph ph-check-circle" aria-hidden="true"></i>
           <span>Pedido <strong>{approvedCode}</strong> aprobado y programado. El reproductor lo descargará en su próxima revisión.</span>
         </div>

@@ -34,4 +34,16 @@ const {
   <body>
     <slot />
   </body>
+
+  <script>
+    const ALERT_VISIBLE_MS = 5000;
+    const ALERT_FADE_MS = 300;
+
+    for (const alert of document.querySelectorAll<HTMLElement>('.alert.ok[data-autodismiss]')) {
+      window.setTimeout(() => {
+        alert.classList.add('is-dismissing');
+        window.setTimeout(() => alert.remove(), ALERT_FADE_MS);
+      }, ALERT_VISIBLE_MS);
+    }
+  </script>
 </html>

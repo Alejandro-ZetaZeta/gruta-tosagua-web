@@ -1,4 +1,5 @@
 ---
+import { actions } from 'astro:actions';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import { getSettings } from '../../lib/settings';
@@ -7,6 +8,7 @@ import { getProfile } from '../../lib/profiles';
 import { getOrdersForUser } from '../../lib/services/orders';
 import { CATEGORY_META, STATUS_META } from '../../lib/types';
 import { formatDateLong, formatMoney } from '../../lib/time';
+import { friendlyError } from '../../lib/errors';
 
 const settings = await getSettings();
 const session = verifySession(Astro.cookies.get(sessionCookie.name)?.value);
@@ -19,12 +21,21 @@ if (!profile) {
   );
 }
 
+const result = Astro.getActionResult(actions.updateProfile);
+if (result?.data?.ok) return Astro.redirect('/cuenta?guardado=1', 303);
+
 const orders = await getOrdersForUser(session.userId);
 const name = profile.display_name ?? session.email;
+const saved = Astro.url.searchParams.get('guardado') === '1';
+const editing = Astro.url.searchParams.get('editar') === '1' || Boolean(result?.error);
+const missing = [
+  profile.display_name?.trim() ? '' : 'nombre',
+  profile.phone ? '' : 'teléfono',
+].filter(Boolean);
 ---
 
 <BaseLayout title="Mi cuenta">
-  <Header helpPhone={settings.help_phone} homeHref="/cuenta" />
+  <Header helpPhone={settings.help_phone} homeHref="/cuenta" showLogout />
 
   <div class="dashboard">
     <section class="card pad dash-head">
@@ -42,13 +53,93 @@ const name = profile.display_name ?? session.email;
             <i class="ph ph-gear-six" aria-hidden="true"></i> Ir al panel
           </a>
         )}
-        <form method="POST" action="/api/logout">
-          <button class="btn btn-ghost" type="submit">
-            <i class="ph ph-sign-out" aria-hidden="true"></i> Cerrar sesión
-          </button>
-        </form>
       </div>
     </section>
+
+    {saved && (
+      <div class="alert ok" data-autodismiss>
+        <i class="ph ph-check-circle" aria-hidden="true"></i>
+        <span>Sus datos se guardaron.</span>
+      </div>
+    )}
+
+    {profile.role !== 'ADMIN' && missing.length > 0 && !saved && (
+      <div class="alert warn">
+        <i class="ph ph-user-circle" aria-hidden="true"></i>
+        <span>
+          Complete su cuenta: falta {missing.join(' y ')}.{' '}
+          <a href="/cuenta?editar=1#mis-datos">Complete sus datos</a> para que podamos comunicarnos con usted.
+        </span>
+      </div>
+    )}
+
+    {result?.error && (
+      <div class="alert danger">
+        <i class="ph ph-warning" aria-hidden="true"></i>
+        <span>{friendlyError(result.error)}</span>
+      </div>
+    )}
+
+    <div class="card pad stack" id="mis-datos">
+      <div class="adm-head">
+        <h2 style="font-size:1.35rem">Sus datos</h2>
+        {!editing && (
+          <a class="btn btn-ghost btn-sm" href="/cuenta?editar=1#mis-datos">
+            <i class="ph ph-pencil-simple" aria-hidden="true"></i> Editar datos
+          </a>
+        )}
+      </div>
+
+      {editing ? (
+        <form method="POST" action={actions.updateProfile} class="stack">
+          <div class="fields">
+            <div class="field">
+              <label for="profile-name">Nombre o usuario</label>
+              <input
+                id="profile-name"
+                type="text"
+                name="name"
+                autocomplete="name"
+                minlength="2"
+                maxlength="80"
+                value={profile.display_name ?? ''}
+                required
+              />
+              <span class="hint">Puede usar el nombre de Google o cambiarlo.</span>
+            </div>
+            <div class="field">
+              <label for="profile-phone">Teléfono</label>
+              <input
+                id="profile-phone"
+                type="tel"
+                name="phone"
+                inputmode="tel"
+                autocomplete="tel"
+                maxlength="20"
+                value={profile.phone ?? ''}
+                required
+              />
+              <span class="hint">Ej.: 0991234567. Sin código de país.</span>
+            </div>
+          </div>
+          <div class="row">
+            <button class="btn btn-primary" type="submit">
+              <i class="ph ph-check" aria-hidden="true"></i> Guardar datos
+            </button>
+            <a class="btn btn-ghost" href="/cuenta#mis-datos">Cancelar</a>
+          </div>
+        </form>
+      ) : (
+        <>
+          <dl class="bank">
+            <div><dt>Nombre o usuario</dt><dd>{name}</dd></div>
+            <div><dt>Correo</dt><dd>{session.email}</dd></div>
+            <div><dt>Teléfono</dt><dd>{profile.phone ?? '—'}</dd></div>
+          </dl>
+          <p class="read-time">Para cambiar el correo, llame a la encargada.</p>
+        </>
+      )}
+    </div>
 
     <div class="card pad stack">
       <div class="adm-head">
@@ -85,16 +176,8 @@ const name = profile.display_name ?? session.email;
       )}
     </div>
 
-    <div class="card pad stack">
-      <h2 style="font-size:1.35rem">Sus datos</h2>
-      <dl class="bank">
-        <div><dt>Nombre</dt><dd>{name}</dd></div>
-        <div><dt>Correo</dt><dd>{session.email}</dd></div>
-        <div><dt>Teléfono</dt><dd>{profile.phone ?? '—'}</dd></div>
-      </dl>
-      <p class="read-time">
-        Para cambiar sus datos, llame a la encargada al <a href={`tel:${settings.help_phone.replace(/[^\d+]/g, '')}`}>{settings.help_phone}</a>.
-      </p>
-    </div>
+    <p class="read-time" style="text-align:center">
+      ¿Necesita ayuda? Llame a la encargada al <a href={`tel:${settings.help_phone.replace(/[^\d+]/g, '')}`}>{settings.help_phone}</a>.
+    </p>
   </div>
 </BaseLayout>

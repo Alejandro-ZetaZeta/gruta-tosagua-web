@@ -5,9 +5,10 @@ import { getProfile } from '../lib/profiles';
 import { rateLimit } from '../lib/rate-limit';
 import { addBlockedPhone, getSettings, updateSettings } from '../lib/settings';
 import { createSession, sessionCookie } from '../lib/session';
-import { estimateSeconds, normalizePhone } from '../lib/time';
+import { estimateSeconds } from '../lib/time';
 import type { Settings } from '../lib/types';
 import { CATEGORIES, VOICES } from '../lib/types';
+import { isValidEmail, normalizeEcuadorPhone, normalizeEmail } from '../lib/validation';
 import { authClient } from '../lib/insforge';
 import { draftScript } from '../lib/services/ai';
 import {
@@ -96,7 +97,7 @@ export const server = {
   createOrder: defineAction({
     input: z.object({
       clientName: z.string().min(2).max(80),
-      clientPhone: z.string().min(7).max(24),
+      clientPhone: z.string().min(1).max(24),
       category: z.enum(CATEGORIES),
       rawIdea: z.string().min(10).max(1200),
       finalScript: z.string().min(10).max(1800),
@@ -112,6 +113,9 @@ export const server = {
       const userId = context.locals.userId;
       if (!userId) fail('Inicie sesión para pedir un anuncio.', 'UNAUTHORIZED');
 
+      const clientPhone = normalizeEcuadorPhone(input.clientPhone);
+      if (!clientPhone) fail('Escriba un teléfono de Ecuador. Ej.: 0991234567.');
+
       const settings = await getSettings();
       const duration = Math.min(110, Math.max(5, estimateSeconds(input.finalScript)));
       const plan = await previewSchedule(
@@ -125,7 +129,7 @@ export const server = {
         fail('No hay suficientes tandas libres para esas repeticiones en esa fecha. Elija otro día o menos repeticiones.');
       }
 
-      const order = await insertOrder(input, settings, userId);
+      const order = await insertOrder({ ...input, clientPhone }, settings, userId);
       return {
         ok: true,
         orderCode: order.order_code,
@@ -199,17 +203,27 @@ export const server = {
     accept: 'form',
     input: z.object({
       name: z.string().min(2, 'Escriba su nombre.').max(80),
-      email: z.email('Escriba un correo válido.'),
-      phone: z.string().min(7, 'Escriba su teléfono.').max(24),
-      password: z.string().min(8, 'Use al menos 8 caracteres.').max(72),
+      email: z.string().min(1).max(254),
+      phone: z.string().min(1).max(24),
+      password: z.string().min(1).max(72),
       confirmPassword: z.string(),
     }),
     handler: async (input, context) => {
       maybeLimit(context.clientAddress, 'client-register', 6);
       const name = input.name.trim();
-      const email = input.email.trim().toLowerCase();
-      const phone = input.phone.trim();
-      if (normalizePhone(phone).length < 7) fail('Escriba un teléfono válido.');
+      const email = normalizeEmail(input.email);
+      const phone = normalizeEcuadorPhone(input.phone);
+      if (!isValidEmail(email)) fail('Escriba un correo válido. Ej.: nombre@correo.com');
+      if (!phone) fail('Escriba un teléfono de Ecuador. Ej.: 0991234567.');
+      if (input.password.length < 12) fail('La contraseña debe tener al menos 12 caracteres.');
+      if (
+        !/[a-z]/.test(input.password) ||
+        !/[A-Z]/.test(input.password) ||
+        !/\d/.test(input.password) ||
+        !/[^A-Za-z0-9]/.test(input.password)
+      ) {
+        fail('La contraseña debe incluir una mayúscula, una minúscula, un número y un símbolo.');
+      }
       if (input.password !== input.confirmPassword) fail('Las dos contraseñas no coinciden.');
 
       const { data, error } = await authClient().auth.signUp({
@@ -255,6 +269,34 @@ export const server = {
         createSession(data.user.id, data.user.email ?? email),
         sessionCookie.options,
       );
+      return { ok: true };
+    },
+  }),
+
+  updateProfile: defineAction({
+    accept: 'form',
+    input: z.object({
+      name: z.string().min(1).max(80),
+      phone: z.string().min(1).max(24),
+    }),
+    handler: async (input, context) => {
+      const userId = context.locals.userId;
+      if (!userId) fail('Su sesión expiró. Vuelva a entrar.', 'UNAUTHORIZED');
+
+      const name = input.name.trim();
+      if (name.length < 2) fail('Escriba su nombre.');
+      const phone = normalizeEcuadorPhone(input.phone);
+      if (!phone) fail('Escriba un teléfono de Ecuador. Ej.: 0991234567.');
+
+      const updated = await db()
+        .database.from('profiles')
+        .update({ display_name: name, phone })
+        .eq('user_id', userId)
+        .select('user_id');
+      if (updated.error) fail(`No pudimos guardar sus datos. ${describeDbError(updated.error)}`);
+      if (!updated.data || updated.data.length === 0) {
+        fail('No encontramos su perfil. Vuelva a entrar.', 'NOT_FOUND');
+      }
       return { ok: true };
     },
   }),

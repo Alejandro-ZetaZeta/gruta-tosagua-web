@@ -30,43 +30,50 @@ const items = [
 ---
 
 <BaseLayout title={title} noindex>
-  <Header variant="admin">
-    <span slot="right" class="pill gold help">
-      <i class="ph ph-calendar-blank" aria-hidden="true"></i> {today}
-    </span>
-  </Header>
+  <div class="admin-shell">
+    <Header variant="admin">
+      <span slot="right" class="pill gold help">
+        <i class="ph ph-calendar-blank" aria-hidden="true"></i> {today}
+      </span>
+    </Header>
 
-  <div class="admin">
-    <nav class="nav" aria-label="Secciones del panel">
-      {items.map((item) => (
-        <a href={item.href} aria-current={active === item.key ? 'page' : undefined}>
-          <i class={`ph ph-${item.icon}`} aria-hidden="true"></i>
-          {item.label}
-          {item.key === 'review' && (pending ?? 0) > 0 && <span class="badge">{pending}</span>}
-        </a>
-      ))}
-      <form class="who" method="POST" action="/api/logout">
-        <b>{adminEmail}</b><br />
-        Encargada
-        <button class="btn btn-ghost btn-sm" type="submit" style="margin-top:10px;width:100%">
-          <i class="ph ph-sign-out" aria-hidden="true"></i> Cerrar sesión
+    <div class="admin">
+      <nav class="nav" aria-label="Secciones del panel">
+        {items.map((item) => (
+          <a href={item.href} aria-current={active === item.key ? 'page' : undefined}>
+            <i class={`ph ph-${item.icon}`} aria-hidden="true"></i>
+            {item.label}
+            {item.key === 'review' && (pending ?? 0) > 0 && <span class="badge">{pending}</span>}
+          </a>
+        ))}
+        <form class="who" method="POST" action="/api/logout">
+          <b>{adminEmail}</b><br />
+          Encargada
+          <button class="btn btn-logout btn-sm" type="submit" style="margin-top:10px;width:100%">
+            <i class="ph ph-sign-out" aria-hidden="true"></i> Cerrar sesión
+          </button>
+        </form>
+      </nav>
+
+      <main class="adm-main">
+        <slot />
+      </main>
+    </div>
+
+    <nav class="mobile-nav" aria-label="Secciones del panel">
+      {items
+        .filter((item) => item.key !== 'history')
+        .map((item) => (
+          <a href={item.href} aria-current={active === item.key ? 'page' : undefined}>
+            <i class={`ph ph-${item.icon}`} aria-hidden="true"></i>
+            {item.short}
+          </a>
+        ))}
+      <form method="POST" action="/api/logout" style="display:contents">
+        <button class="mobile-logout" type="submit">
+          <i class="ph ph-sign-out" aria-hidden="true"></i> Salir
         </button>
       </form>
     </nav>
-
-    <main class="adm-main">
-      <slot />
-    </main>
   </div>
-
-  <nav class="mobile-nav" aria-label="Secciones del panel">
-    {items
-      .filter((item) => item.key !== 'history')
-      .map((item) => (
-        <a href={item.href} aria-current={active === item.key ? 'page' : undefined}>
-          <i class={`ph ph-${item.icon}`} aria-hidden="true"></i>
-          {item.short}
-        </a>
-      ))}
-  </nav>
 </BaseLayout>

@@ -94,6 +94,7 @@ const categories = CATEGORIES.map((key) => ({ key, ...CATEGORY_META[key] }));
                 data-field="phone"
                 value={profile?.phone ?? ''}
               />
+              <span class="hint">Ej.: 0991234567. Sin código de país.</span>
               <span class="error" data-error="phone" role="alert"></span>
             </div>
             <div class="field full">
@@ -325,6 +326,7 @@ const categories = CATEGORIES.map((key) => ({ key, ...CATEGORY_META[key] }));
 
 <script>
   import { actions } from 'astro:actions';
+  import { isValidEcuadorPhone } from '../../lib/validation';
 
   const wizard = document.querySelector<HTMLElement>('[data-wizard]');
   if (wizard) {
@@ -438,8 +440,8 @@ const categories = CATEGORIES.map((key) => ({ key, ...CATEGORY_META[key] }));
         setError('name', 'Escriba su nombre.');
         ok = false;
       }
-      if (phoneInput.value.replace(/\D/g, '').length < 7) {
-        setError('phone', 'Escriba un teléfono válido.');
+      if (!isValidEcuadorPhone(phoneInput.value)) {
+        setError('phone', 'Escriba un teléfono de Ecuador. Ej.: 0991234567.');
         ok = false;
       }
       if (ideaInput.value.trim().length < 10) {

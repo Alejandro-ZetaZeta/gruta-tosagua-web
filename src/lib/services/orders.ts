@@ -1,6 +1,7 @@
 import { db, describeDbError } from '../insforge';
 import { isBlocked } from '../settings';
-import { formatClock, localDateKey, localMinutes, normalizePhone, parseTimeToMinutes } from '../time';
+import { formatClock, localDateKey, localMinutes, parseTimeToMinutes } from '../time';
+import { normalizeEcuadorPhone } from '../validation';
 import type { Category, Order, Payment, ScheduleSlot, Settings, Voice } from '../types';
 import { CATEGORIES, VOICES } from '../types';
 import { latestPayment } from './payments';
@@ -19,12 +20,12 @@ export interface CreateOrderInput {
 
 export function validateOrderInput(input: CreateOrderInput, settings: Settings): CreateOrderInput {
   const clientName = input.clientName.trim();
-  const clientPhone = input.clientPhone.trim();
+  const clientPhone = normalizeEcuadorPhone(input.clientPhone);
   const rawIdea = input.rawIdea.trim();
   const finalScript = input.finalScript.trim();
 
   if (clientName.length < 2 || clientName.length > 80) throw new Error('Escriba su nombre completo.');
-  if (normalizePhone(clientPhone).length < 7) throw new Error('Escriba un teléfono válido.');
+  if (!clientPhone) throw new Error('Escriba un teléfono de Ecuador. Ej.: 0991234567.');
   if (rawIdea.length < 10 || rawIdea.length > 1200) {
     throw new Error('Cuéntenos su anuncio con un poco más de detalle.');
   }
@@ -100,7 +101,8 @@ export async function getOrderByCode(code: string): Promise<Order | null> {
 export async function getOrderForClient(code: string, phone: string): Promise<Order | null> {
   const order = await getOrderByCode(code);
   if (!order) return null;
-  if (normalizePhone(order.client_phone) !== normalizePhone(phone)) return null;
+  const orderPhone = normalizeEcuadorPhone(order.client_phone);
+  if (!orderPhone || orderPhone !== normalizeEcuadorPhone(phone)) return null;
   return order;
 }
 

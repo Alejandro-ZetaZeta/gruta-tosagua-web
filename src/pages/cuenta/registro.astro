@@ -34,11 +34,17 @@ if (existing) {
   </header>
 
   <div class="login-wrap">
-    <div class="card pad login-card">
-      <div class="login-head">
-        <div class="logo"><i class="ph ph-user-plus" aria-hidden="true"></i></div>
-        <h1>Crear mi cuenta</h1>
-        <p class="muted">Solo necesitamos unos datos básicos para guardar sus pedidos.</p>
+    <div class="card register-card">
+      <div class="register-head">
+        <div>
+          <span class="eyebrow">Cuenta nueva</span>
+          <h1>Crear mi cuenta</h1>
+          <p class="muted">Solo necesitamos unos datos básicos para guardar sus pedidos.</p>
+        </div>
+        <a class="btn btn-google register-google" href="/api/auth/google">
+          <img src="/images/google-g.png" alt="" width="20" height="20" aria-hidden="true" />
+          Registrarme con Google
+        </a>
       </div>
 
       {(queryError || result?.error) && (
@@ -48,58 +54,57 @@ if (existing) {
         </div>
       )}
 
-      <a class="btn btn-google btn-block" href="/api/auth/google">
-        <img src="/images/google-g.png" alt="" width="20" height="20" aria-hidden="true" />
-        Registrarme con Google
-      </a>
-
-      <div class="divider">o cree su cuenta con correo</div>
+      <div class="divider">o use su correo</div>
 
       <form method="POST" action={actions.clientRegister} class="stack">
         <div class="fields">
           <div class="field">
             <label for="reg-name">Su nombre</label>
             <input id="reg-name" type="text" name="name" autocomplete="name" required />
+            <span class="hint">Como quiere que le llamemos.</span>
           </div>
           <div class="field">
             <label for="reg-phone">Su teléfono</label>
-            <input id="reg-phone" type="tel" name="phone" inputmode="tel" autocomplete="tel" required />
+            <input id="reg-phone" type="tel" name="phone" inputmode="tel" autocomplete="tel" maxlength="20" required />
+            <span class="hint">Ej.: 0991234567. Sin código de país.</span>
           </div>
           <div class="field full">
             <label for="reg-email">Correo electrónico</label>
-            <input id="reg-email" type="email" name="email" autocomplete="email" required />
+            <input id="reg-email" type="email" name="email" autocomplete="email" maxlength="254" required />
           </div>
-          <div class="field" style="align-content: start">
+          <div class="field">
             <label for="reg-password">Contraseña</label>
             <div class="password-wrap">
-              <input id="reg-password" type="password" name="password" autocomplete="new-password" minlength="8" required />
+              <input id="reg-password" type="password" name="password" autocomplete="new-password" minlength="12" required />
               <button type="button" class="toggle-password" data-target="reg-password" aria-label="Mostrar contraseña" aria-pressed="false">
                 <i class="ph ph-eye" aria-hidden="true"></i>
               </button>
             </div>
-            <span class="hint">Mínimo 8 caracteres.</span>
+            <span class="hint">Mínimo 12 caracteres, con mayúscula, minúscula, número y símbolo.</span>
           </div>
-          <div class="field" style="align-content: start">
+          <div class="field">
             <label for="reg-confirm">Repita la contraseña</label>
             <div class="password-wrap">
-              <input id="reg-confirm" type="password" name="confirmPassword" autocomplete="new-password" minlength="8" required />
+              <input id="reg-confirm" type="password" name="confirmPassword" autocomplete="new-password" minlength="12" required />
               <button type="button" class="toggle-password" data-target="reg-confirm" aria-label="Mostrar contraseña" aria-pressed="false">
                 <i class="ph ph-eye" aria-hidden="true"></i>
               </button>
             </div>
+            <span class="hint">Debe ser igual a la anterior.</span>
           </div>
         </div>
-        <button class="btn btn-primary btn-block" type="submit">
-          <i class="ph ph-user-plus" aria-hidden="true"></i> Crear cuenta
-        </button>
+        <div class="register-actions">
+          <p class="read-time">Todos los campos son obligatorios.</p>
+          <button class="btn btn-primary register-submit" type="submit">
+            <i class="ph ph-user-plus" aria-hidden="true"></i> Crear cuenta
+          </button>
+        </div>
       </form>
 
-      <p class="read-time" style="text-align:center">
-        ¿Ya tiene cuenta? <a href="/login">Entre aquí</a>.
-      </p>
-      <p class="read-time" style="text-align:center">
-        ¿Necesita ayuda? Llame al {settings.help_phone}.
-      </p>
+      <div class="register-foot">
+        <p class="read-time">¿Ya tiene cuenta? <a href="/login">Entre aquí</a>.</p>
+        <p class="read-time">¿Necesita ayuda? Llame al {settings.help_phone}.</p>
+      </div>
     </div>
   </div>
 </BaseLayout>

@@ -35,6 +35,12 @@ export function describeDbError(error: unknown): string {
   if (typeof error === 'object' && error !== null && 'message' in error) {
     const message = String((error as { message?: unknown }).message ?? '');
     if (message.includes('SLOT_CAPACITY_EXCEEDED')) return 'La tanda ya está llena.';
+    if (message.includes('profiles_phone_ec') || message.includes('orders_client_phone_ec')) {
+      return 'Escriba un teléfono de Ecuador. Ej.: 0991234567.';
+    }
+    if (message.includes('orders_client_name_len')) {
+      return 'Escriba un nombre válido.';
+    }
     return message || 'Error de base de datos.';
   }
   return String(error);

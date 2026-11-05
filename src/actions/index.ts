@@ -313,6 +313,7 @@ export const server = {
 
       const isAdmin = profile.role === 'ADMIN';
       const token = await createSession(data.user.id, data.user.email ?? email, isAdmin);
+      context.cookies.delete('gruta_verify_email', { path: '/' });
       context.cookies.set(sessionCookie.name, token, sessionCookieOptions(sessionTtlSeconds(isAdmin)));
       return { ok: true, isAdmin };
     },
@@ -385,6 +386,7 @@ export const server = {
       }
 
       await revokeSessionsByEmail(email);
+      context.cookies.delete('gruta_reset_email', { path: '/' });
       return { ok: true };
     },
   }),

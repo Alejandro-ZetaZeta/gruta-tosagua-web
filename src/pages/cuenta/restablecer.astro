@@ -6,7 +6,19 @@ import { getSettings } from '../../lib/settings';
 import { friendlyError } from '../../lib/errors';
 
 const settings = await getSettings();
-const email = (Astro.url.searchParams.get('email') ?? '').trim().toLowerCase();
+const queryEmail = (Astro.url.searchParams.get('email') ?? '').trim().toLowerCase();
+const cookieEmail = Astro.cookies.get('gruta_reset_email')?.value ?? '';
+const email = queryEmail || cookieEmail;
+if (!email) return Astro.redirect('/cuenta/recuperar');
+if (queryEmail) {
+  Astro.cookies.set('gruta_reset_email', email, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: import.meta.env.PROD,
+    path: '/',
+    maxAge: 900,
+  });
+}
 const sent = Astro.url.searchParams.get('enviado') === '1';
 
 const result = Astro.getActionResult(actions.resetPassword);
@@ -51,16 +63,13 @@ if (result?.data?.ok) return Astro.redirect('/login?restablecido=1');
 
       <form method="POST" action={actions.resetPassword} class="stack">
         <div class="field">
-          <label for="new-email">Correo electrónico</label>
-          <input
-            id="new-email"
-            type="email"
-            name="email"
-            autocomplete="email"
-            maxlength="254"
-            value={email}
-            required
-          />
+          <span class="label">Correo electrónico</span>
+          <div class="locked-field">
+            <i class="ph ph-lock-simple" aria-hidden="true"></i>
+            <span>{email}</span>
+          </div>
+          <input type="hidden" name="email" value={email} />
+          <span class="hint">Si se equivocó de correo, pida un código nuevo.</span>
         </div>
         <OtpInput id="reset" />
         <div class="field">

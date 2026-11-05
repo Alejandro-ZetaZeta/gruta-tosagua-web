@@ -14,7 +14,7 @@ player-daemon/data/
 player-daemon/audios_cache/
 *.db
 *.db-journal
-
+insforge.toml
 # os
 .DS_Store
 Thumbs.db

@@ -8,7 +8,19 @@ import { verifySession, sessionCookie } from '../../lib/session';
 import { friendlyError } from '../../lib/errors';
 
 const settings = await getSettings();
-const email = (Astro.url.searchParams.get('email') ?? '').trim().toLowerCase();
+const queryEmail = (Astro.url.searchParams.get('email') ?? '').trim().toLowerCase();
+const cookieEmail = Astro.cookies.get('gruta_verify_email')?.value ?? '';
+const email = queryEmail || cookieEmail;
+if (!email) return Astro.redirect('/login');
+if (queryEmail) {
+  Astro.cookies.set('gruta_verify_email', email, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: import.meta.env.PROD,
+    path: '/',
+    maxAge: 900,
+  });
+}
 const mailFailed = Astro.url.searchParams.get('fallo') === '1';
 const warned = Astro.url.searchParams.get('aviso') === '1';
 
@@ -77,16 +89,13 @@ if (existing) {
 
       <form method="POST" action={actions.verifyEmail} class="stack">
         <div class="field">
-          <label for="verify-email">Correo electrónico</label>
-          <input
-            id="verify-email"
-            type="email"
-            name="email"
-            autocomplete="email"
-            maxlength="254"
-            value={email}
-            required
-          />
+          <span class="label">Correo electrónico</span>
+          <div class="locked-field">
+            <i class="ph ph-lock-simple" aria-hidden="true"></i>
+            <span>{email}</span>
+          </div>
+          <input type="hidden" name="email" value={email} />
+          <span class="hint">Para usar otro correo, vuelva a entrar o solicite un código nuevo.</span>
         </div>
         <OtpInput id="verify" />
         <button class="btn btn-primary btn-block" type="submit">

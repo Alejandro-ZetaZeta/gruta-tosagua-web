@@ -1,18 +1,25 @@
-type Bucket = { count: number; resetAt: number };
-const buckets = new Map<string, Bucket>();
+import { createHash } from 'node:crypto';
+import { db } from './insforge';
 
-/** Límite simple en memoria, por instancia. Suficiente para este servidor único. */
-export function rateLimit(key: string, limit: number, windowMs: number): boolean {
-  const now = Date.now();
-  const current = buckets.get(key);
-  if (!current || current.resetAt <= now) {
-    buckets.set(key, { count: 1, resetAt: now + windowMs });
-    if (buckets.size > 5000) {
-      for (const [k, v] of buckets) if (v.resetAt <= now) buckets.delete(k);
-    }
+/**
+ * Límite persistente por clave (acción + IP). La IP se guarda hasheada.
+ * Si la base falla, no bloquea: el límite es defensa en profundidad.
+ */
+export async function rateLimit(key: string, limit: number, windowMs: number): Promise<boolean> {
+  const separator = key.indexOf(':');
+  const scope = separator === -1 ? 'general' : key.slice(0, separator);
+  const identifier = separator === -1 ? key : key.slice(separator + 1);
+  const storageKey = `${scope}:${createHash('sha256').update(identifier).digest('hex')}`;
+
+  const { data, error } = await db().database.rpc('consume_rate_limit', {
+    p_key: storageKey,
+    p_limit: limit,
+    p_window_seconds: Math.max(1, Math.ceil(windowMs / 1000)),
+  });
+
+  if (error) {
+    console.error('[rate-limit]', error);
     return true;
   }
-  if (current.count >= limit) return false;
-  current.count += 1;
-  return true;
+  return data === true;
 }

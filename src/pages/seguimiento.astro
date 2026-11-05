@@ -18,14 +18,14 @@ const order = data?.found ? data.order : null;
 const canUpload = Boolean(order && ['PENDING_PAYMENT', 'UNDER_REVIEW'].includes(order.status));
 ---
 
-<BaseLayout title="Consultar mi pedido">
+<BaseLayout title="Consultar mi pedido" noindex>
   <Header helpPhone={settings.help_phone} />
 
   <div class="narrow">
     <div class="page-title" style="margin-bottom:20px">
       <span class="eyebrow">Seguimiento</span>
       <h1>Consultar mi pedido</h1>
-      <p class="muted">Escriba el código que le dimos y el teléfono con el que hizo el pedido.</p>
+      <p class="muted">Escriba el código que le dimos. Solo verá los pedidos de su cuenta.</p>
     </div>
 
     <form class="card pad stack" method="POST" action={actions.trackOrder}>
@@ -42,10 +42,7 @@ const canUpload = Boolean(order && ['PENDING_PAYMENT', 'UNDER_REVIEW'].includes(
             required
             style="text-transform:uppercase"
           />
-        </div>
-        <div class="field">
-          <label for="track-phone">Teléfono</label>
-          <input id="track-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" required />
+          <span class="hint">También puede ver todos sus pedidos en <a href="/cuenta">Mi cuenta</a>.</span>
         </div>
       </div>
       {(queryError || formError) && (
@@ -57,7 +54,7 @@ const canUpload = Boolean(order && ['PENDING_PAYMENT', 'UNDER_REVIEW'].includes(
       {data && !data.found && (
         <div class="alert warn">
           <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
-          <span>No encontramos un pedido con ese código y teléfono. Revise los datos o llame a la encargada.</span>
+          <span>No encontramos ese pedido en su cuenta. Revise el código o llame a la encargada.</span>
         </div>
       )}
       <div class="actions" style="margin-top:8px">
@@ -114,7 +111,6 @@ const canUpload = Boolean(order && ['PENDING_PAYMENT', 'UNDER_REVIEW'].includes(
             data-reupload
           >
             <input type="hidden" name="orderCode" value={order.order_code} />
-            <input type="hidden" name="phone" value={order.client_phone} />
             <div class="field">
               <label for="new-receipt">Nueva foto o PDF del comprobante</label>
               <input id="new-receipt" name="receipt" type="file" accept="image/*,application/pdf" required />

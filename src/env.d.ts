@@ -12,7 +12,6 @@ interface ImportMetaEnv {
   readonly INSFORGE_URL: string;
   readonly INSFORGE_API_KEY: string;
   readonly INSFORGE_ANON_KEY: string;
-  readonly SESSION_SECRET: string;
   readonly PLAYER_TOKEN: string;
   readonly OPENROUTER_API_KEY?: string;
   readonly OPENROUTER_TEXT_MODEL?: string;

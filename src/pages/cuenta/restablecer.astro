@@ -1,0 +1,112 @@
+---
+import { actions } from 'astro:actions';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getSettings } from '../../lib/settings';
+import { friendlyError } from '../../lib/errors';
+
+const settings = await getSettings();
+const email = (Astro.url.searchParams.get('email') ?? '').trim().toLowerCase();
+const sent = Astro.url.searchParams.get('enviado') === '1';
+
+const result = Astro.getActionResult(actions.resetPassword);
+if (result?.data?.ok) return Astro.redirect('/login?restablecido=1');
+---
+
+<BaseLayout title="Nueva contraseña" noindex>
+  <header class="top">
+    <a class="logo" href="/" aria-label="La Gruta, inicio">
+      <i class="ph ph-church" aria-hidden="true"></i>
+    </a>
+    <div class="brand">
+      <b>La Gruta</b>
+      <span>Nueva contraseña</span>
+    </div>
+    <a class="btn btn-ghost btn-sm" href="/login" style="margin-left:auto">
+      <i class="ph ph-arrow-left" aria-hidden="true"></i> <span>Volver a entrar</span>
+    </a>
+  </header>
+
+  <div class="login-wrap">
+    <div class="card pad login-card">
+      <div class="login-head">
+        <div class="logo"><i class="ph ph-lock-key" aria-hidden="true"></i></div>
+        <h1>Nueva contraseña</h1>
+        <p class="muted">Escriba el código que recibió y su nueva contraseña.</p>
+      </div>
+
+      {sent && (
+        <div class="alert ok">
+          <i class="ph ph-check-circle" aria-hidden="true"></i>
+          <span>Si el correo está registrado, enviamos un código.</span>
+        </div>
+      )}
+
+      {result?.error && (
+        <div class="alert danger">
+          <i class="ph ph-warning" aria-hidden="true"></i>
+          <span>{friendlyError(result.error)}</span>
+        </div>
+      )}
+
+      <form method="POST" action={actions.resetPassword} class="stack">
+        <div class="field">
+          <label for="new-email">Correo electrónico</label>
+          <input
+            id="new-email"
+            type="email"
+            name="email"
+            autocomplete="email"
+            maxlength="254"
+            value={email}
+            required
+          />
+        </div>
+        <div class="field">
+          <label for="new-code">Código de 6 dígitos</label>
+          <input
+            id="new-code"
+            type="text"
+            name="code"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            pattern="\d{6}"
+            maxlength="6"
+            required
+          />
+        </div>
+        <div class="field">
+          <label for="new-password">Nueva contraseña</label>
+          <input
+            id="new-password"
+            type="password"
+            name="password"
+            autocomplete="new-password"
+            minlength="12"
+            maxlength="72"
+            required
+          />
+          <span class="hint">Mínimo 12 caracteres, con mayúscula, minúscula, número y símbolo.</span>
+        </div>
+        <div class="field">
+          <label for="new-confirm">Repita la contraseña</label>
+          <input
+            id="new-confirm"
+            type="password"
+            name="confirmPassword"
+            autocomplete="new-password"
+            minlength="12"
+            maxlength="72"
+            required
+          />
+        </div>
+        <button class="btn btn-primary btn-block" type="submit">
+          <i class="ph ph-check" aria-hidden="true"></i> Cambiar contraseña
+        </button>
+      </form>
+
+      <p class="read-time" style="text-align:center">
+        <a href="/cuenta/recuperar">Pedir otro código</a>. ¿Necesita ayuda? Llame al {settings.help_phone}.
+      </p>
+    </div>
+  </div>
+</BaseLayout>

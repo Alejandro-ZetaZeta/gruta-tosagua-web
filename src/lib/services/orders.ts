@@ -88,22 +88,16 @@ export async function getOrderById(id: string): Promise<Order | null> {
   return (data as Order | null) ?? null;
 }
 
-export async function getOrderByCode(code: string): Promise<Order | null> {
+/** Solo devuelve el pedido si pertenece a la cuenta que lo consulta. */
+export async function getOrderForUser(code: string, userId: string): Promise<Order | null> {
   const { data, error } = await db()
     .database.from('orders')
     .select('*')
     .eq('order_code', code.trim().toUpperCase())
+    .eq('user_id', userId)
     .maybeSingle();
   if (error) throw new Error(describeDbError(error));
   return (data as Order | null) ?? null;
-}
-
-export async function getOrderForClient(code: string, phone: string): Promise<Order | null> {
-  const order = await getOrderByCode(code);
-  if (!order) return null;
-  const orderPhone = normalizeEcuadorPhone(order.client_phone);
-  if (!orderPhone || orderPhone !== normalizeEcuadorPhone(phone)) return null;
-  return order;
 }
 
 export async function getOrderSlots(orderId: string): Promise<ScheduleSlot[]> {

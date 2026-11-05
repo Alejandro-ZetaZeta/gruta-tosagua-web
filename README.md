@@ -28,7 +28,15 @@ Los usuarios viven en `auth.users`; el rol vive en la tabla `public.profiles` (`
 
 Clientes y encargada usan **el mismo acceso `/login`**: si el perfil es `ADMIN` va a `/panel`; si es `CLIENT` va a `/cuenta`. Los clientes se registran en `/cuenta/registro` (nombre, correo, teléfono y contraseña); sus pedidos quedan vinculados a su cuenta (`orders.user_id`).
 
-InsForge soporta verificación por correo, pero en este proyecto está **desactivada**: no hay SMTP configurado y la app no tiene pantalla para ingresar el código. El registro entra directo. Si se activa, hay que agregar el paso de verificación.
+### Sesiones y tokens
+
+La app no guarda los JWT de InsForge en el navegador. El login, el registro, Google y la verificación de correo crean una **sesión opaca en `public.user_sessions`**. La cookie (`__Host-gruta_session` en producción) es `HttpOnly`, `SameSite=Lax` y `Secure`; no contiene correo ni datos. Al cerrar sesión se borra la fila, así que el token deja de servir aunque alguien lo haya copiado. Las sesiones de cliente duran 7 días; las de `ADMIN`, 24 horas. Al recuperar la contraseña se borran todas las sesiones de ese correo.
+
+Los access/refresh tokens que devuelve InsForge se descartan al terminar el login. Es deliberado: InsForge no ofrece revocación de refresh tokens del lado del servidor para clientes server/mobile (su logout solo limpia cookies del navegador). Por eso la sesión de la app no depende de ellos.
+
+La verificación por correo queda **activada** en `insforge.toml` con método de código, pero **todavía no se aplicó al proyecto**. La app ya tiene la pantalla `/cuenta/verificar` y el reenvío. Aplíquela solo cuando el SMTP esté configurado: si aún no hay SMTP, el registro crea la cuenta pero el código no llega. Si configura SMTP desde el panel, actualice también la sección `[auth.smtp]` de `insforge.toml` antes de `npx @insforge/cli config apply`, o ese comando volverá a desactivarlo.
+
+La recuperación de contraseña usa `/cuenta/recuperar` y `/cuenta/restablecer` con código de 6 dígitos (también requiere SMTP). El seguimiento (`/seguimiento`) y la subida de comprobantes ahora requieren sesión y solo aceptan pedidos de la propia cuenta. Los pedidos antiguos sin `user_id` debe atenderlos la encargada; no aparecen en el portal del cliente.
 
 Para crear una cuenta nueva y dejarla como ADMIN:
 
@@ -60,12 +68,14 @@ Ambos scripts usan `ADMIN_EMAIL` de `.env.local` como correo sugerido. La cuenta
 
 ## Base de datos
 
-Migraciones: `migrations/`. Tablas: `orders`, `payments`, `schedule_slots`, `emissions_log`, `system_settings`, `profiles`.
+Migraciones: `migrations/`. Tablas: `orders`, `payments`, `schedule_slots`, `emissions_log`, `system_settings`, `profiles`, `user_sessions`, `rate_limits`.
 - `profiles.role` (`ADMIN`/`CLIENT`), `profiles.phone` y `orders.user_id` vinculan cuentas con pedidos.
 - Buckets privados: `receipts`, `audios`.
 - RLS activo en todo; `anon` y `authenticated` no tienen acceso. El servidor usa la API key de administración (solo en `.env.local`).
 - `record_emission()` marca la tanda, registra la emisión y descuenta el saldo en una sola transacción.
 - La capacidad de 120 s por tanda se valida con un trigger.
+- `rate_limits` + `consume_rate_limit()` aplican límites persistentes por IP y acción; sobreviven reinicios.
+- La CSP de Astro hashea los scripts y estilos inline; los `style=` se permiten solo en `style-src-attr`.
 
 ## Despliegue
 
@@ -74,7 +84,9 @@ npm run build
 npm start
 ```
 
-Variables requeridas en el servidor: `INSFORGE_URL`, `INSFORGE_API_KEY`, `INSFORGE_ANON_KEY`, `SESSION_SECRET`, `PLAYER_TOKEN`. Recomendada: `UTC_OFFSET_MIN` (-300 para Ecuador; se usa para mostrar fechas/horas). Opcionales: `OPENROUTER_API_KEY`, `OPENROUTER_TEXT_MODEL`, `OPENROUTER_VISION_MODEL`, `PUBLIC_SITE_URL`. `ADMIN_EMAIL` solo lo usan los scripts de administración como correo sugerido; no autoriza a nadie por sí solo.
+Variables requeridas en el servidor: `INSFORGE_URL`, `INSFORGE_API_KEY`, `INSFORGE_ANON_KEY`, `PLAYER_TOKEN`, `PUBLIC_SITE_URL`. Recomendada: `UTC_OFFSET_MIN` (-300 para Ecuador; se usa para mostrar fechas/horas). Opcionales: `OPENROUTER_API_KEY`, `OPENROUTER_TEXT_MODEL`, `OPENROUTER_VISION_MODEL`. `ADMIN_EMAIL` solo lo usan los scripts de administración como correo sugerido; no autoriza a nadie por sí solo.
+
+En producción, `PUBLIC_SITE_URL` debe ser el dominio HTTPS real (por ejemplo `https://lagruta.org`). Se usa para validar el Host y confiar en `X-Forwarded-For` detrás de Nginx/Caddy; sin él, todos los clientes podrían compartir el mismo límite de intentos por IP.
 
 El sitio necesita HTTPS para que la cámara del teléfono funcione (o `localhost` en pruebas). El reproductor usa la URL pública del sitio.
 

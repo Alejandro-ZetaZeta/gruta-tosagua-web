@@ -16,6 +16,20 @@ export function normalizeEmail(value: string): string {
   return value.trim().toLowerCase();
 }
 
+export function passwordProblem(password: string): string | null {
+  if (password.length < 12) return 'La contraseña debe tener al menos 12 caracteres.';
+  if (
+    !/[a-z]/.test(password) ||
+    !/[A-Z]/.test(password) ||
+    !/\d/.test(password) ||
+    !/[^A-Za-z0-9]/.test(password)
+  ) {
+    return 'La contraseña debe incluir una mayúscula, una minúscula, un número y un símbolo.';
+  }
+  if (password.length > 72) return 'La contraseña no puede pasar de 72 caracteres.';
+  return null;
+}
+
 export function isValidEmail(value: string): boolean {
   const email = normalizeEmail(value);
   if (email.length > 254) return false;

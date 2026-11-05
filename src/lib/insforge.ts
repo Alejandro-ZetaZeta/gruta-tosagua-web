@@ -15,7 +15,11 @@ export function db() {
   return admin;
 }
 
-/** Cliente público, solo para validar correo y contraseña de la encargada. */
+/**
+ * Cliente público, solo para validar credenciales. Sus JWT se descartan a
+ * propósito: InsForge no revoca refresh tokens del lado del servidor, así que
+ * la sesión de la app vive en public.user_sessions.
+ */
 export function authClient() {
   const baseUrl = serverEnv('INSFORGE_URL', import.meta.env.INSFORGE_URL);
   const anonKey = serverEnv('INSFORGE_ANON_KEY', import.meta.env.INSFORGE_ANON_KEY);

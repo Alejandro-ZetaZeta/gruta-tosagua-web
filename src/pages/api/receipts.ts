@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getSettings } from '../../lib/settings';
-import { getOrderForClient } from '../../lib/services/orders';
+import { getOrderForUser } from '../../lib/services/orders';
 import { attachReceipt } from '../../lib/services/payments';
 import { rateLimit } from '../../lib/rate-limit';
 
@@ -25,25 +25,35 @@ function failure(request: Request, orderCode: string, message: string, status: n
   });
 }
 
-export const POST: APIRoute = async ({ request, clientAddress }) => {
+export const POST: APIRoute = async ({ request, clientAddress, locals }) => {
   let orderCode = '';
   try {
-    if (!rateLimit(`receipt:${clientAddress ?? 'local'}`, 15, 60 * 60 * 1000)) {
+    const userId = locals.userId;
+    if (!userId) {
+      if (wantsJson(request)) {
+        return new Response(JSON.stringify({ ok: false, error: 'Inicie sesión para subir su comprobante.' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      return new Response(null, { status: 303, headers: { Location: '/login' } });
+    }
+
+    if (!(await rateLimit(`receipt:${clientAddress ?? 'local'}`, 15, 60 * 60 * 1000))) {
       return failure(request, orderCode, 'Recibimos muchos intentos seguidos. Espere unos minutos.', 429);
     }
 
     const form = await request.formData();
     orderCode = String(form.get('orderCode') ?? '').trim().toUpperCase();
-    const phone = String(form.get('phone') ?? '').trim();
     const reference = String(form.get('reference') ?? '').trim();
     const files = form.getAll('receipt').filter((value): value is File => value instanceof File && value.size > 0);
     const file = files[0];
 
-    if (!orderCode || !phone) return failure(request, orderCode, 'Falta el código o el teléfono del pedido.', 400);
+    if (!orderCode) return failure(request, orderCode, 'Falta el código del pedido.', 400);
     if (!file) return failure(request, orderCode, 'Elija una foto o un PDF de su comprobante.', 400);
 
-    const order = await getOrderForClient(orderCode, phone);
-    if (!order) return failure(request, orderCode, 'No encontramos ese pedido. Revise el código y el teléfono.', 404);
+    const order = await getOrderForUser(orderCode, userId);
+    if (!order) return failure(request, orderCode, 'No encontramos ese pedido en su cuenta.', 404);
 
     const settings = await getSettings();
     await attachReceipt(order, file, settings, reference || null);

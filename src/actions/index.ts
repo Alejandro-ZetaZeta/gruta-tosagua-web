@@ -4,17 +4,23 @@ import { db, describeDbError } from '../lib/insforge';
 import { getProfile } from '../lib/profiles';
 import { rateLimit } from '../lib/rate-limit';
 import { addBlockedPhone, getSettings, updateSettings } from '../lib/settings';
-import { createSession, sessionCookie } from '../lib/session';
+import {
+  createSession,
+  revokeSessionsByEmail,
+  sessionCookie,
+  sessionCookieOptions,
+  sessionTtlSeconds,
+} from '../lib/session';
 import { estimateSeconds } from '../lib/time';
 import type { Settings } from '../lib/types';
 import { CATEGORIES, VOICES } from '../lib/types';
-import { isValidEmail, normalizeEcuadorPhone, normalizeEmail } from '../lib/validation';
+import { isValidEmail, normalizeEcuadorPhone, normalizeEmail, passwordProblem } from '../lib/validation';
 import { authClient } from '../lib/insforge';
 import { draftScript } from '../lib/services/ai';
 import {
   createOrder as insertOrder,
   getOrderById,
-  getOrderForClient,
+  getOrderForUser,
   getOrderSlots,
 } from '../lib/services/orders';
 import { latestPayment } from '../lib/services/payments';
@@ -26,13 +32,19 @@ function fail(message: string, code: 'BAD_REQUEST' | 'UNAUTHORIZED' | 'FORBIDDEN
   throw new ActionError({ code, message });
 }
 
+function authErrorCode(error: unknown): string {
+  return typeof error === 'object' && error !== null && 'error' in error
+    ? String((error as { error?: unknown }).error ?? '')
+    : '';
+}
+
 function requireAdmin(locals: App.Locals): string {
   if (!locals.adminEmail) fail('Su sesión expiró. Vuelva a entrar.', 'UNAUTHORIZED');
   return locals.adminEmail;
 }
 
-function maybeLimit(clientAddress: string | undefined, scope: string, limit: number): void {
-  if (!rateLimit(`${scope}:${clientAddress ?? 'local'}`, limit, 60 * 60 * 1000)) {
+async function maybeLimit(clientAddress: string | undefined, scope: string, limit: number): Promise<void> {
+  if (!(await rateLimit(`${scope}:${clientAddress ?? 'local'}`, limit, 60 * 60 * 1000))) {
     fail('Recibimos muchos intentos seguidos. Espere unos minutos y vuelva a intentar.');
   }
 }
@@ -55,7 +67,7 @@ export const server = {
       targetDate: z.string().optional().default(''),
     }),
     handler: async (input, context) => {
-      maybeLimit(context.clientAddress, 'draft-script', 30);
+      await maybeLimit(context.clientAddress, 'draft-script', 30);
       const draft = await draftScript(input.rawIdea, input.category, input.clientName, input.targetDate);
       return {
         script: draft.script,
@@ -108,7 +120,7 @@ export const server = {
       website: z.string().max(0).optional(), // honeypot
     }),
     handler: async (input, context) => {
-      maybeLimit(context.clientAddress, 'create-order', 8);
+      await maybeLimit(context.clientAddress, 'create-order', 8);
       if (input.website) fail('No pudimos recibir el pedido.');
       const userId = context.locals.userId;
       if (!userId) fail('Inicie sesión para pedir un anuncio.', 'UNAUTHORIZED');
@@ -149,11 +161,12 @@ export const server = {
     accept: 'form',
     input: z.object({
       code: z.string().min(4).max(12),
-      phone: z.string().min(6).max(24),
     }),
     handler: async (input, context) => {
-      maybeLimit(context.clientAddress, 'track-order', 30);
-      const order = await getOrderForClient(input.code, input.phone);
+      const userId = context.locals.userId;
+      if (!userId) fail('Inicie sesión para consultar sus pedidos.', 'UNAUTHORIZED');
+      await maybeLimit(context.clientAddress, 'track-order', 30);
+      const order = await getOrderForUser(input.code, userId);
       if (!order) return { found: false as const };
       const slots = await getOrderSlots(order.id);
       const payment = await latestPayment(order.id);
@@ -178,24 +191,31 @@ export const server = {
       password: z.string().min(1, 'Escriba su contraseña.'),
     }),
     handler: async (input, context) => {
-      maybeLimit(context.clientAddress, 'login', 20);
+      await maybeLimit(context.clientAddress, 'login', 20);
       const email = input.email.trim().toLowerCase();
 
       const { data, error } = await authClient().auth.signInWithPassword({
         email,
         password: input.password,
       });
-      if (error || !data?.user) fail('Correo o contraseña incorrectos.', 'UNAUTHORIZED');
+      if (error) {
+        if (error.statusCode === 403) {
+          fail(
+            'Debe verificar su correo antes de entrar. Pida un código nuevo si no lo recibió.',
+            'FORBIDDEN',
+          );
+        }
+        fail('Correo o contraseña incorrectos.', 'UNAUTHORIZED');
+      }
+      if (!data?.user) fail('Correo o contraseña incorrectos.', 'UNAUTHORIZED');
 
       const profile = await getProfile(data.user.id);
       if (!profile) fail('Su cuenta no tiene perfil. Comuníquese con la encargada.', 'FORBIDDEN');
 
-      context.cookies.set(
-        sessionCookie.name,
-        createSession(data.user.id, data.user.email ?? email),
-        sessionCookie.options,
-      );
-      return { ok: true, isAdmin: profile.role === 'ADMIN' };
+      const isAdmin = profile.role === 'ADMIN';
+      const token = await createSession(data.user.id, data.user.email ?? email, isAdmin);
+      context.cookies.set(sessionCookie.name, token, sessionCookieOptions(sessionTtlSeconds(isAdmin)));
+      return { ok: true, isAdmin };
     },
   }),
 
@@ -209,21 +229,14 @@ export const server = {
       confirmPassword: z.string(),
     }),
     handler: async (input, context) => {
-      maybeLimit(context.clientAddress, 'client-register', 6);
+      await maybeLimit(context.clientAddress, 'client-register', 6);
       const name = input.name.trim();
       const email = normalizeEmail(input.email);
       const phone = normalizeEcuadorPhone(input.phone);
       if (!isValidEmail(email)) fail('Escriba un correo válido. Ej.: nombre@correo.com');
       if (!phone) fail('Escriba un teléfono de Ecuador. Ej.: 0991234567.');
-      if (input.password.length < 12) fail('La contraseña debe tener al menos 12 caracteres.');
-      if (
-        !/[a-z]/.test(input.password) ||
-        !/[A-Z]/.test(input.password) ||
-        !/\d/.test(input.password) ||
-        !/[^A-Za-z0-9]/.test(input.password)
-      ) {
-        fail('La contraseña debe incluir una mayúscula, una minúscula, un número y un símbolo.');
-      }
+      const passwordIssue = passwordProblem(input.password);
+      if (passwordIssue) fail(passwordIssue);
       if (input.password !== input.confirmPassword) fail('Las dos contraseñas no coinciden.');
 
       const { data, error } = await authClient().auth.signUp({
@@ -233,16 +246,21 @@ export const server = {
       });
 
       if (error) {
+        // La cuenta sí se creó, pero el correo con el código no salió.
+        if (
+          authErrorCode(error) === 'AUTH_VERIFICATION_EMAIL_DELIVERY_FAILED' ||
+          /verification email|email.*could not be sent/i.test(error.message)
+        ) {
+          console.error('[register] email', error);
+          return { ok: true, needsVerification: true, email, mailFailed: true };
+        }
         if (/already|exists|registered/i.test(error.message)) {
-          fail('Ese correo ya tiene una cuenta. Inicie sesión.');
+          fail('Ese correo ya tiene una cuenta. Inicie sesión o confirme su correo.');
         }
         console.error('[register]', error);
         fail('No pudimos crear la cuenta. Intente de nuevo.');
       }
       if (!data?.user?.id) fail('No pudimos crear la cuenta. Intente de nuevo.');
-      if (data.requireEmailVerification) {
-        fail('La cuenta se creó, pero debe verificar su correo antes de entrar.');
-      }
 
       const updated = await db()
         .database.from('profiles')
@@ -264,11 +282,109 @@ export const server = {
         }
       }
 
-      context.cookies.set(
-        sessionCookie.name,
-        createSession(data.user.id, data.user.email ?? email),
-        sessionCookie.options,
-      );
+      if (data.requireEmailVerification || !data.accessToken) {
+        return { ok: true, needsVerification: true, email };
+      }
+
+      const token = await createSession(data.user.id, data.user.email ?? email, false);
+      context.cookies.set(sessionCookie.name, token, sessionCookieOptions(sessionTtlSeconds(false)));
+      return { ok: true, needsVerification: false, email };
+    },
+  }),
+
+  verifyEmail: defineAction({
+    accept: 'form',
+    input: z.object({
+      email: z.email('Escriba un correo válido.'),
+      code: z.string().regex(/^\d{6}$/, 'Escriba el código de 6 dígitos.'),
+    }),
+    handler: async (input, context) => {
+      await maybeLimit(context.clientAddress, 'verify-email', 20);
+      const email = normalizeEmail(input.email);
+
+      const { data, error } = await authClient().auth.verifyEmail({ email, otp: input.code });
+      if (error || !data?.user?.id) {
+        if (error) console.error('[verify]', error);
+        fail('El código no es correcto o ya venció. Pida uno nuevo.', 'UNAUTHORIZED');
+      }
+
+      const profile = await getProfile(data.user.id);
+      if (!profile) fail('Su cuenta no tiene perfil. Comuníquese con la encargada.', 'FORBIDDEN');
+
+      const isAdmin = profile.role === 'ADMIN';
+      const token = await createSession(data.user.id, data.user.email ?? email, isAdmin);
+      context.cookies.set(sessionCookie.name, token, sessionCookieOptions(sessionTtlSeconds(isAdmin)));
+      return { ok: true, isAdmin };
+    },
+  }),
+
+  resendVerification: defineAction({
+    accept: 'form',
+    input: z.object({
+      email: z.email('Escriba un correo válido.'),
+    }),
+    handler: async (input, context) => {
+      await maybeLimit(context.clientAddress, 'resend-verification', 5);
+      const { error } = await authClient().auth.resendVerificationEmail({
+        email: normalizeEmail(input.email),
+      });
+      if (error) {
+        console.error('[verify] resend', error);
+        fail('No pudimos enviar el código. Intente de nuevo en unos minutos.');
+      }
+      return { ok: true };
+    },
+  }),
+
+  requestPasswordReset: defineAction({
+    accept: 'form',
+    input: z.object({
+      email: z.email('Escriba un correo válido.'),
+    }),
+    handler: async (input, context) => {
+      await maybeLimit(context.clientAddress, 'reset-request', 5);
+      const email = normalizeEmail(input.email);
+      const { error } = await authClient().auth.sendResetPasswordEmail({ email });
+      // No se revela si el correo existe ni si el SMTP falló.
+      if (error) console.error('[reset] request', error);
+      return { ok: true, email };
+    },
+  }),
+
+  resetPassword: defineAction({
+    accept: 'form',
+    input: z.object({
+      email: z.email('Escriba un correo válido.'),
+      code: z.string().regex(/^\d{6}$/, 'Escriba el código de 6 dígitos.'),
+      password: z.string().min(1).max(72),
+      confirmPassword: z.string(),
+    }),
+    handler: async (input, context) => {
+      await maybeLimit(context.clientAddress, 'reset-password', 10);
+      const email = normalizeEmail(input.email);
+      const passwordIssue = passwordProblem(input.password);
+      if (passwordIssue) fail(passwordIssue);
+      if (input.password !== input.confirmPassword) fail('Las dos contraseñas no coinciden.');
+
+      const exchange = await authClient().auth.exchangeResetPasswordToken({
+        email,
+        code: input.code,
+      });
+      if (exchange.error || !exchange.data?.token) {
+        if (exchange.error) console.error('[reset] exchange', exchange.error);
+        fail('El código no es correcto o ya venció. Pida uno nuevo.', 'UNAUTHORIZED');
+      }
+
+      const reset = await authClient().auth.resetPassword({
+        newPassword: input.password,
+        otp: exchange.data.token,
+      });
+      if (reset.error) {
+        console.error('[reset]', reset.error);
+        fail('No pudimos cambiar la contraseña. Intente de nuevo.');
+      }
+
+      await revokeSessionsByEmail(email);
       return { ok: true };
     },
   }),

@@ -4,20 +4,23 @@ import Header from '../components/Header.astro';
 import WizardSteps from '../components/WizardSteps.astro';
 import ClientTimeline from '../components/ClientTimeline.astro';
 import { getSettings } from '../lib/settings';
-import { getOrderByCode, getOrderSlots } from '../lib/services/orders';
+import { getOrderForUser, getOrderSlots } from '../lib/services/orders';
 import { latestPayment } from '../lib/services/payments';
 import { CATEGORY_META } from '../lib/types';
 import { formatMoney } from '../lib/time';
 
 const settings = await getSettings();
+const userId = Astro.locals.userId;
+if (!userId) return Astro.redirect('/login');
+
 const code = (Astro.url.searchParams.get('codigo') ?? '').trim();
 const error = Astro.url.searchParams.get('error') ?? '';
-const order = code ? await getOrderByCode(code) : null;
+const order = code ? await getOrderForUser(code, userId) : null;
 const slots = order ? await getOrderSlots(order.id) : [];
 const payment = order ? await latestPayment(order.id) : null;
 ---
 
-<BaseLayout title="Pedido recibido">
+<BaseLayout title="Pedido recibido" noindex>
   <Header helpPhone={settings.help_phone} />
 
   <div class="layout">
@@ -33,7 +36,7 @@ const payment = order ? await latestPayment(order.id) : null;
               <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
             </div>
             <h1>No encontramos ese pedido</h1>
-            <p class="muted">Revise el código o consulte con su teléfono.</p>
+            <p class="muted">Revise el código o consulte desde su cuenta.</p>
             <div class="actions" style="border:none;justify-content:center">
               <a class="btn btn-primary" href="/seguimiento">Consultar mi pedido</a>
               <a class="btn btn-ghost" href="/">Pedir un anuncio</a>

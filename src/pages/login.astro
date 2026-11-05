@@ -8,11 +8,14 @@ import { friendlyError } from '../lib/errors';
 
 const settings = await getSettings();
 const queryError = Astro.url.searchParams.get('error') ?? '';
+const resetDone = Astro.url.searchParams.get('restablecido') === '1';
 
 const result = Astro.getActionResult(actions.login);
 if (result?.data?.ok) return Astro.redirect(result.data.isAdmin ? '/panel' : '/cuenta');
+const errorText = queryError || friendlyError(result?.error);
+const needsVerification = errorText.toLowerCase().includes('verificar');
 
-const existing = verifySession(Astro.cookies.get(sessionCookie.name)?.value);
+const existing = await verifySession(Astro.cookies.get(sessionCookie.name)?.value);
 if (existing) {
   const profile = await getProfile(existing.userId);
   if (profile) return Astro.redirect(profile.role === 'ADMIN' ? '/panel' : '/cuenta');
@@ -41,10 +44,25 @@ if (existing) {
         <p class="muted">Clientes y encargada usan la misma entrada. Le llevaremos a su cuenta o al panel según su rol.</p>
       </div>
 
-      {(queryError || result?.error) && (
+      {resetDone && (
+        <div class="alert ok">
+          <i class="ph ph-check-circle" aria-hidden="true"></i>
+          <span>Su contraseña se cambió. Entre con la nueva.</span>
+        </div>
+      )}
+
+      {errorText && (
         <div class="alert danger">
           <i class="ph ph-warning" aria-hidden="true"></i>
-          <span>{queryError || friendlyError(result?.error)}</span>
+          <span>
+            {errorText}
+            {needsVerification && (
+              <>
+                {' '}
+                <a href="/cuenta/verificar">Verificar mi correo</a>.
+              </>
+            )}
+          </span>
         </div>
       )}
 
@@ -69,6 +87,12 @@ if (existing) {
         </button>
       </form>
 
+      <p class="read-time" style="text-align:center">
+        ¿Olvidó su contraseña? <a href="/cuenta/recuperar">Recupere su cuenta</a>.
+      </p>
+      <p class="read-time" style="text-align:center">
+        ¿No ha confirmado su correo? <a href="/cuenta/verificar">Pida el código</a>.
+      </p>
       <p class="read-time" style="text-align:center">
         ¿No tiene cuenta? <a href="/cuenta/registro">Cree una gratis</a>.
       </p>

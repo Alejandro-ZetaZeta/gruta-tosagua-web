@@ -24,10 +24,11 @@ try {
   )
     .trim()
     .toLowerCase();
-  const password = process.argv[3] ?? (await rl.question('Contraseña (mínimo 10 caracteres): '));
+  // No se acepta por argumento: quedaría en el historial y en la lista de procesos.
+  const password = await rl.question('Contraseña (mínimo 12 caracteres): ');
 
   if (!email || !email.includes('@')) throw new Error('Correo inválido.');
-  if (password.length < 10) throw new Error('Use una contraseña de al menos 10 caracteres.');
+  if (password.length < 12) throw new Error('Use una contraseña de al menos 12 caracteres.');
 
   const client = createClient({
     baseUrl: env.INSFORGE_URL,

@@ -10,9 +10,16 @@ const settings = await getSettings();
 const queryError = Astro.url.searchParams.get('error') ?? '';
 
 const result = Astro.getActionResult(actions.clientRegister);
-if (result?.data?.ok) return Astro.redirect('/cuenta');
+if (result?.data?.ok) {
+  if (result.data.needsVerification) {
+    const params = new URLSearchParams({ email: result.data.email });
+    if (result.data.mailFailed) params.set('fallo', '1');
+    return Astro.redirect(`/cuenta/verificar?${params}`);
+  }
+  return Astro.redirect('/cuenta');
+}
 
-const existing = verifySession(Astro.cookies.get(sessionCookie.name)?.value);
+const existing = await verifySession(Astro.cookies.get(sessionCookie.name)?.value);
 if (existing) {
   const profile = await getProfile(existing.userId);
   if (profile) return Astro.redirect('/cuenta');
@@ -39,7 +46,7 @@ if (existing) {
         <div>
           <span class="eyebrow">Cuenta nueva</span>
           <h1>Crear mi cuenta</h1>
-          <p class="muted">Solo necesitamos unos datos básicos para guardar sus pedidos.</p>
+          <p class="muted">Solo necesitamos unos datos básicos. Le enviaremos un código para confirmar su correo.</p>
         </div>
         <a class="btn btn-google register-google" href="/api/auth/google">
           <img src="/images/google-g.png" alt="" width="20" height="20" aria-hidden="true" />

@@ -34,7 +34,11 @@ try {
   });
   if (error) throw new Error(error.message);
 
-  console.log(`La cuenta ${email} ahora es ADMIN (${data}).`);
+  // Un ascenso de privilegios invalida las sesiones abiertas con el rol anterior.
+  const revoked = await admin.database.from('user_sessions').delete().eq('user_id', data);
+  if (revoked.error) console.warn('Rol actualizado, pero no se pudieron cerrar las sesiones:', revoked.error.message);
+
+  console.log(`La cuenta ${email} ahora es ADMIN (${data}). Vuelva a entrar para usar el panel.`);
 } catch (error) {
   console.error('No se pudo promover la cuenta:', error instanceof Error ? error.message : error);
   process.exitCode = 1;

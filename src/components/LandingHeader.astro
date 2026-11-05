@@ -18,7 +18,7 @@ const { loggedIn } = Astro.props;
   <nav class="landing-nav" aria-label="Navegación principal">
     <a class="hide-mobile" href="#como-funciona">Cómo funciona</a>
     <a class="hide-mobile" href="#precio">Precio</a>
-    <a class="hide-mobile" href="/seguimiento">Consultar pedido</a>
+    <a class="hide-mobile" href={loggedIn ? '/seguimiento' : '/login'}>Consultar pedido</a>
     <a class="btn btn-ghost btn-sm" href={loggedIn ? '/cuenta' : '/login'}>
       <i class="ph ph-user" aria-hidden="true"></i>
       <span>{loggedIn ? 'Mi cuenta' : 'Entrar'}</span>

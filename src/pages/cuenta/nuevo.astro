@@ -9,7 +9,7 @@ import { addDaysKey, formatClock, formatMoney, localDateKey, localMinutes, parse
 import { CATEGORIES, CATEGORY_META } from '../../lib/types';
 
 const settings = await getSettings();
-const session = verifySession(Astro.cookies.get(sessionCookie.name)?.value);
+const session = await verifySession(Astro.cookies.get(sessionCookie.name)?.value);
 if (!session) return Astro.redirect('/cuenta/login');
 const profile = await getProfile(session.userId);
 if (!profile) return Astro.redirect('/cuenta/login');

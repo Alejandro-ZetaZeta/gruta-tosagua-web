@@ -1,7 +1,12 @@
 import type { APIRoute } from 'astro';
 import { authClient, db } from '../../../../lib/insforge';
 import { getProfile } from '../../../../lib/profiles';
-import { createSession, sessionCookie } from '../../../../lib/session';
+import {
+  createSession,
+  sessionCookie,
+  sessionCookieOptions,
+  sessionTtlSeconds,
+} from '../../../../lib/session';
 
 const VERIFIER_COOKIE = 'gruta_google_verifier';
 
@@ -40,6 +45,8 @@ export const GET: APIRoute = async ({ url, cookies, redirect }) => {
     return redirect(backToLogin('Su cuenta no tiene perfil. Comuníquese con la encargada.'), 303);
   }
 
-  cookies.set(sessionCookie.name, createSession(user.id, user.email), sessionCookie.options);
-  return redirect(profile.role === 'ADMIN' ? '/panel' : '/cuenta', 303);
+  const isAdmin = profile.role === 'ADMIN';
+  const token = await createSession(user.id, user.email, isAdmin);
+  cookies.set(sessionCookie.name, token, sessionCookieOptions(sessionTtlSeconds(isAdmin)));
+  return redirect(isAdmin ? '/panel' : '/cuenta', 303);
 };

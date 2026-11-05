@@ -7,7 +7,7 @@ import { CATEGORIES, CATEGORY_META } from '../lib/types';
 import { formatClock } from '../lib/time';
 
 const settings = await getSettings();
-const loggedIn = Boolean(verifySession(Astro.cookies.get(sessionCookie.name)?.value));
+const loggedIn = Boolean(await verifySession(Astro.cookies.get(sessionCookie.name)?.value));
 const categories = CATEGORIES.map((key) => ({ key, ...CATEGORY_META[key] }));
 const hours = `${formatClock(settings.open_time)} a ${formatClock(settings.close_time)}`;
 const cta = loggedIn ? '/cuenta/nuevo' : '/cuenta/registro';
@@ -32,7 +32,7 @@ const cleanPhone = settings.help_phone.replace(/[^\d+]/g, '');
           <a class="btn btn-primary" href={cta}>
             {ctaLabel} <i class="ph ph-arrow-right" aria-hidden="true"></i>
           </a>
-          <a class="btn btn-ghost" href="/seguimiento">Consultar un pedido</a>
+          <a class="btn btn-ghost" href={loggedIn ? '/seguimiento' : '/login'}>Consultar un pedido</a>
         </div>
 
         {!loggedIn && (
@@ -139,7 +139,7 @@ const cleanPhone = settings.help_phone.replace(/[^\d+]/g, '');
         </div>
         <div class="price-actions">
           <a class="btn btn-primary" href={cta}>{ctaLabel}</a>
-          <a class="btn btn-ghost" href="/seguimiento">Consultar un pedido</a>
+          <a class="btn btn-ghost" href={loggedIn ? '/seguimiento' : '/login'}>Consultar un pedido</a>
         </div>
       </div>
     </section>
@@ -155,7 +155,7 @@ const cleanPhone = settings.help_phone.replace(/[^\d+]/g, '');
         <b>Portal</b>
         <a href="/login">Entrar</a>
         <a href="/cuenta/registro">Crear cuenta</a>
-        <a href="/seguimiento">Consultar pedido</a>
+        <a href={loggedIn ? '/seguimiento' : '/login'}>Consultar pedido</a>
       </div>
       <div>
         <b>Contacto</b>

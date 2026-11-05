@@ -1,6 +1,7 @@
 ---
 import { actions } from 'astro:actions';
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import OtpInput from '../../components/OtpInput.astro';
 import { getSettings } from '../../lib/settings';
 import { friendlyError } from '../../lib/errors';
 
@@ -61,19 +62,7 @@ if (result?.data?.ok) return Astro.redirect('/login?restablecido=1');
             required
           />
         </div>
-        <div class="field">
-          <label for="new-code">Código de 6 dígitos</label>
-          <input
-            id="new-code"
-            type="text"
-            name="code"
-            inputmode="numeric"
-            autocomplete="one-time-code"
-            pattern="\d{6}"
-            maxlength="6"
-            required
-          />
-        </div>
+        <OtpInput id="reset" />
         <div class="field">
           <label for="new-password">Nueva contraseña</label>
           <input

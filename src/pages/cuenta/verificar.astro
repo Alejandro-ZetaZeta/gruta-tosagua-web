@@ -1,6 +1,7 @@
 ---
 import { actions } from 'astro:actions';
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import OtpInput from '../../components/OtpInput.astro';
 import { getSettings } from '../../lib/settings';
 import { getProfile } from '../../lib/profiles';
 import { verifySession, sessionCookie } from '../../lib/session';
@@ -9,6 +10,7 @@ import { friendlyError } from '../../lib/errors';
 const settings = await getSettings();
 const email = (Astro.url.searchParams.get('email') ?? '').trim().toLowerCase();
 const mailFailed = Astro.url.searchParams.get('fallo') === '1';
+const warned = Astro.url.searchParams.get('aviso') === '1';
 
 const verify = Astro.getActionResult(actions.verifyEmail);
 if (verify?.data?.ok) return Astro.redirect(verify.data.isAdmin ? '/panel' : '/cuenta');
@@ -48,7 +50,14 @@ if (existing) {
       {mailFailed && (
         <div class="alert warn">
           <i class="ph ph-warning" aria-hidden="true"></i>
-          <span>La cuenta se creó, pero no pudimos enviar el código. Use “Enviar código de nuevo”.</span>
+          <span>La cuenta se creó, pero no pudimos enviar el primer código. Use “Enviar código de nuevo”.</span>
+        </div>
+      )}
+
+      {warned && !errorText && !resend?.data?.ok && (
+        <div class="alert warn">
+          <i class="ph ph-envelope-simple" aria-hidden="true"></i>
+          <span>Confirme su correo para entrar. Use el código enviado o pida uno nuevo.</span>
         </div>
       )}
 
@@ -79,19 +88,7 @@ if (existing) {
             required
           />
         </div>
-        <div class="field">
-          <label for="verify-code">Código de 6 dígitos</label>
-          <input
-            id="verify-code"
-            type="text"
-            name="code"
-            inputmode="numeric"
-            autocomplete="one-time-code"
-            pattern="\d{6}"
-            maxlength="6"
-            required
-          />
-        </div>
+        <OtpInput id="verify" />
         <button class="btn btn-primary btn-block" type="submit">
           <i class="ph ph-check" aria-hidden="true"></i> Confirmar correo
         </button>

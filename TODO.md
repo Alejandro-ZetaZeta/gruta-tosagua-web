@@ -26,20 +26,22 @@ Lista de trabajo derivada de `AGENTS.md` y `DESIGN.md`.
 - [x] Login de la encargada y de clientes con InsForge + sesión opaca revocable en `user_sessions`; el rol se revisa en cada petición.
 - [x] Verificación por código, reenvío y recuperación de contraseña (revoca todas las sesiones del correo).
 - [x] Rate limits persistentes en Postgres y CSP de Astro con hashes para scripts/estilos inline.
+- [x] `GRU-1006` vinculado a la cuenta CLIENT no verificada de Andy; el pedido es anterior a `orders.user_id`, así que conserva el nombre/teléfono originales (placeholder).
+- [x] Verificación automática: registro y login sin verificar llevan a `/cuenta/verificar`; código OTP en seis casillas y reenvío.
+- [x] SMTP configurado en InsForge y `insforge.toml` sincronizado con el estado live.
 
 ## Pendiente / decisiones del usuario
 
 - [x] Cuenta `tosaguagruta@gmail.com` creada a mano en Auth y promovida a `ADMIN` en `public.profiles`.
 - [ ] Para designados: crear la cuenta y promoverla con `npm run promote-admin` (nunca editar el rol a mano en el panel).
 - [ ] Pantalla de usuarios/roles en el panel (hoy se administra con `npm run promote-admin`).
-- [ ] Configurar SMTP en InsForge y aplicar `insforge.toml` (la verificación por código ya está activada en el archivo).
+
 - [ ] Cambiar datos bancarios y teléfono de ayuda en `/panel/ajustes` (hoy son de ejemplo).
 - [ ] Decidir si se activa IA de texto/visión: agregar `OPENROUTER_API_KEY` (el Model Gateway de InsForge requiere plan pago).
 - [ ] Instalar ffmpeg (o VLC) en la PC de la gruta y ajustar `PLAY_CMD` en `player-daemon/.env`.
 - [ ] Desplegar el sitio con HTTPS y apuntar `PLAYER_API_URL` del reproductor a esa URL. Antes de desplegar: configure `PUBLIC_SITE_URL=https://<dominio>` y agregue `https://<dominio>/api/auth/google/callback` a `allowed_redirect_urls` en `insforge.toml` (hoy solo permite localhost).
 - [ ] Probar el volumen real con el amplificador y calibrar la salida de la PC.
 - [ ] Programar el arranque automático del reproductor (Task Scheduler / systemd).
-- [ ] Revisar pedidos con `user_id` vacío (hoy 1: `GRU-1006`); asignarlos a la cuenta del cliente o cerrarlos, porque ya no se pueden consultar desde el portal.
 - [ ] Limpieza periódica de pedidos `PENDING_PAYMENT` abandonados (hoy quedan en la tabla).
 - [ ] Reserva de cupo entre el pago y la aprobación: dos clientes podrían pagar por la misma última tanda; hoy se detecta al aprobar.
 - [ ] Avisar al cliente cuando se pide otra foto (hoy debe volver a “Consultar pedido”).

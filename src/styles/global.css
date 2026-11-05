@@ -180,7 +180,7 @@
   .choice:has(input:focus-visible) { outline: 3px solid var(--color-gold); outline-offset: 3px; }
 
   .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-  .field { display: grid; gap: 6px; align-content: start; }
+  .field { display: grid; gap: 6px; align-content: start; min-width: 0; }
   .field.full { grid-column: 1 / -1; }
   .field label, .field > .label { font-weight: 700; }
   .field .hint { color: var(--color-muted); font-size: .95rem; }
@@ -537,7 +537,7 @@
     .register-head { grid-template-columns: 1fr; }
     .register-google { width: 100%; min-width: 0; }
     .register-actions { flex-direction: column-reverse; align-items: stretch; text-align: center; }
-    .register-submit { width: 100%; }
+    .register-submit { width: 100%; min-width: 0; }
     .register-foot { justify-content: center; text-align: center; }
   }
 

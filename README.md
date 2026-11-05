@@ -34,9 +34,9 @@ La app no guarda los JWT de InsForge en el navegador. El login, el registro, Goo
 
 Los access/refresh tokens que devuelve InsForge se descartan al terminar el login. Es deliberado: InsForge no ofrece revocación de refresh tokens del lado del servidor para clientes server/mobile (su logout solo limpia cookies del navegador). Por eso la sesión de la app no depende de ellos.
 
-La verificación por correo queda **activada** en `insforge.toml` con método de código, pero **todavía no se aplicó al proyecto**. La app ya tiene la pantalla `/cuenta/verificar` y el reenvío. Aplíquela solo cuando el SMTP esté configurado: si aún no hay SMTP, el registro crea la cuenta pero el código no llega. Si configura SMTP desde el panel, actualice también la sección `[auth.smtp]` de `insforge.toml` antes de `npx @insforge/cli config apply`, o ese comando volverá a desactivarlo.
+La verificación por correo está **activa** con método de código y SMTP configurado. La app tiene `/cuenta/verificar` con seis casillas para el código y reenvío; las cuentas nuevas terminan ahí y, si una cuenta sin verificar intenta entrar, se abre esa pantalla automáticamente. Si cambia SMTP desde el panel, actualice también `[auth.smtp]` en `insforge.toml` antes de `npx @insforge/cli config apply`, o ese comando lo desactivará.
 
-La recuperación de contraseña usa `/cuenta/recuperar` y `/cuenta/restablecer` con código de 6 dígitos (también requiere SMTP). El seguimiento (`/seguimiento`) y la subida de comprobantes ahora requieren sesión y solo aceptan pedidos de la propia cuenta. Los pedidos antiguos sin `user_id` debe atenderlos la encargada; no aparecen en el portal del cliente.
+La recuperación de contraseña usa `/cuenta/recuperar` y `/cuenta/restablecer` con código de 6 dígitos (también requiere SMTP). El seguimiento (`/seguimiento`) y la subida de comprobantes ahora requieren sesión y solo aceptan pedidos de la propia cuenta. Los pedidos anteriores a `orders.user_id` se pueden asignar a una cuenta actualizando ese campo; `GRU-1006` ya quedó vinculado a la cuenta CLIENT no verificada de Andy.
 
 Para crear una cuenta nueva y dejarla como ADMIN:
 

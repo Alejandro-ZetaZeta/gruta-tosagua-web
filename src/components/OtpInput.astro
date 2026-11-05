@@ -1,0 +1,208 @@
+---
+interface Props {
+  id: string;
+  name?: string;
+  label?: string;
+}
+
+const { id, name = 'code', label = 'Código de 6 dígitos' } = Astro.props;
+const labelId = `${id}-label`;
+const hintId = `${id}-hint`;
+const errorId = `${id}-error`;
+const digits = [0, 1, 2, 3, 4, 5];
+---
+
+<div class="field">
+  <span class="label" id={labelId}>{label}</span>
+  <div
+    class="otp"
+    data-otp
+    role="group"
+    aria-labelledby={labelId}
+    aria-describedby={`${hintId} ${errorId}`}
+    aria-required="true"
+  >
+    {digits.map((index) => (
+      <input
+        class="otp-digit"
+        data-otp-digit
+        data-index={index}
+        type="text"
+        size={1}
+        inputmode="numeric"
+        pattern="[0-9]*"
+        maxlength={index === 0 ? 6 : 1}
+        autocomplete={index === 0 ? 'one-time-code' : 'off'}
+        autocapitalize="off"
+        spellcheck="false"
+        enterkeyhint={index === 5 ? 'done' : 'next'}
+        aria-label={`Dígito ${index + 1} de 6`}
+      />
+    ))}
+    <input type="hidden" name={name} data-otp-value />
+  </div>
+  <span class="hint" id={hintId}>Puede pegar el código completo.</span>
+  <p class="error" id={errorId} data-otp-error hidden>Escriba los 6 dígitos del código.</p>
+</div>
+
+<script>
+  function digitsOnly(value: string): string {
+    return value.replace(/\D/g, '');
+  }
+
+  function initOtp(group: HTMLElement) {
+    if (group.dataset.otpReady === 'true') return;
+    group.dataset.otpReady = 'true';
+
+    const inputs = Array.from(group.querySelectorAll<HTMLInputElement>('[data-otp-digit]'));
+    const valueInput = group.querySelector<HTMLInputElement>('[data-otp-value]');
+    const form = group.closest('form');
+    const error = group.parentElement?.querySelector<HTMLElement>('[data-otp-error]');
+    if (!inputs.length || !valueInput) return;
+
+    const sync = (): string => {
+      const value = inputs.map((input) => input.value).join('');
+      valueInput.value = value;
+      group.classList.toggle('is-complete', value.length === inputs.length);
+      for (const input of inputs) input.classList.toggle('is-filled', Boolean(input.value));
+      if (error && value.length === inputs.length) error.hidden = true;
+      return value;
+    };
+
+    const focusInput = (index: number) => {
+      const input = inputs[Math.max(0, Math.min(inputs.length - 1, index))];
+      input?.focus();
+      input?.select();
+    };
+
+    const fillFrom = (start: number, raw: string) => {
+      const digits = digitsOnly(raw);
+      if (!digits) return;
+      digits
+        .slice(0, inputs.length - start)
+        .split('')
+        .forEach((digit, offset) => {
+          const input = inputs[start + offset];
+          if (input) input.value = digit;
+        });
+      sync();
+      focusInput(Math.min(start + digits.length, inputs.length - 1));
+    };
+
+    group.addEventListener('input', (event) => {
+      const input = event.target as HTMLInputElement;
+      if (!input.matches('[data-otp-digit]')) return;
+
+      const digits = digitsOnly(input.value);
+      const index = Number(input.dataset.index ?? 0);
+      if (digits.length > 1) {
+        fillFrom(digits.length === inputs.length ? 0 : index, digits);
+        return;
+      }
+
+      input.value = digits.slice(-1);
+      sync();
+      if (input.value && index < inputs.length - 1) focusInput(index + 1);
+    });
+
+    group.addEventListener('paste', (event) => {
+      const input = event.target as HTMLInputElement;
+      if (!input.matches('[data-otp-digit]')) return;
+
+      const digits = digitsOnly(event.clipboardData?.getData('text') ?? '');
+      if (!digits) return;
+      event.preventDefault();
+      fillFrom(digits.length === inputs.length ? 0 : Number(input.dataset.index ?? 0), digits);
+    });
+
+    group.addEventListener('keydown', (event) => {
+      const input = event.target as HTMLInputElement;
+      if (!input.matches('[data-otp-digit]')) return;
+      const index = Number(input.dataset.index ?? 0);
+
+      if (event.key === 'Backspace' && !input.value && index > 0) {
+        event.preventDefault();
+        const previous = inputs[index - 1];
+        if (previous) {
+          previous.value = '';
+          sync();
+          focusInput(index - 1);
+        }
+      } else if (event.key === 'ArrowLeft' && index > 0) {
+        event.preventDefault();
+        focusInput(index - 1);
+      } else if (event.key === 'ArrowRight' && index < inputs.length - 1) {
+        event.preventDefault();
+        focusInput(index + 1);
+      }
+    });
+
+    group.addEventListener('focusin', (event) => {
+      const input = event.target as HTMLInputElement;
+      if (input.matches('[data-otp-digit]')) input.select();
+    });
+
+    form?.addEventListener('submit', (event) => {
+      const value = sync();
+      if (value.length === inputs.length) return;
+      event.preventDefault();
+      if (error) error.hidden = false;
+      const firstEmpty = inputs.find((input) => !input.value) ?? inputs[0];
+      firstEmpty?.focus();
+    });
+
+    sync();
+  }
+
+  document.querySelectorAll<HTMLElement>('[data-otp]').forEach(initOtp);
+</script>
+
+<style>
+  .field,
+  .otp {
+    min-width: 0;
+  }
+  .otp {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+  }
+  .otp-digit {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    min-height: 56px;
+    padding: 0;
+    text-align: center;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--color-ink);
+    background: #fffdf9;
+    border: 2px solid #d6cdbe;
+    border-radius: 14px;
+    caret-color: var(--color-primary);
+  }
+  .otp-digit.is-filled {
+    border-color: var(--color-primary);
+    background: var(--color-primary-soft);
+  }
+  .otp-digit:focus {
+    border-color: var(--color-primary);
+    outline: 3px solid rgba(59, 31, 122, 0.18);
+    outline-offset: 0;
+  }
+  .otp.is-complete .otp-digit {
+    border-color: var(--color-ok);
+    background: var(--color-ok-soft);
+  }
+  @media (max-width: 380px) {
+    .otp {
+      gap: 5px;
+    }
+    .otp-digit {
+      min-height: 50px;
+      font-size: 1.25rem;
+      border-radius: 12px;
+    }
+  }
+</style>

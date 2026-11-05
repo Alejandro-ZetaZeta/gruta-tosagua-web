@@ -200,10 +200,8 @@ export const server = {
       });
       if (error) {
         if (error.statusCode === 403) {
-          fail(
-            'Debe verificar su correo antes de entrar. Pida un código nuevo si no lo recibió.',
-            'FORBIDDEN',
-          );
+          // Cuenta real pero sin verificar: la pantalla de verificación se abre sola.
+          return { ok: false as const, needsVerification: true as const, email };
         }
         fail('Correo o contraseña incorrectos.', 'UNAUTHORIZED');
       }
@@ -260,7 +258,13 @@ export const server = {
         console.error('[register]', error);
         fail('No pudimos crear la cuenta. Intente de nuevo.');
       }
-      if (!data?.user?.id) fail('No pudimos crear la cuenta. Intente de nuevo.');
+      if (!data) fail('No pudimos crear la cuenta. Intente de nuevo.');
+
+      // Con verificación activa, InsForge crea la cuenta pero no devuelve `user`.
+      if (data.requireEmailVerification || !data.accessToken) {
+        return { ok: true, needsVerification: true, email };
+      }
+      if (!data.user?.id) fail('No pudimos crear la cuenta. Intente de nuevo.');
 
       const updated = await db()
         .database.from('profiles')
@@ -280,10 +284,6 @@ export const server = {
           console.error('[register] profile insert', inserted.error);
           fail('La cuenta se creó, pero no pudimos guardar sus datos. Comuníquese con la encargada.');
         }
-      }
-
-      if (data.requireEmailVerification || !data.accessToken) {
-        return { ok: true, needsVerification: true, email };
       }
 
       const token = await createSession(data.user.id, data.user.email ?? email, false);

@@ -13,14 +13,13 @@ require_lowercase = true
 require_uppercase = true
 require_special_char = true
 
-# Complete estos datos (o actualícelos aquí si usa el panel) antes de `config apply`.
 [auth.smtp]
-enabled = false
-host = ""
-port = 465
-username = ""
-sender_email = ""
-sender_name = ""
+enabled = true
+host = "smtp.gmail.com"
+port = 587
+username = "tosaguagruta@gmail.com"
+sender_email = "tosaguagruta@gmail.com"
+sender_name = "Gruta correos"
 min_interval_seconds = 60
 
 [storage]

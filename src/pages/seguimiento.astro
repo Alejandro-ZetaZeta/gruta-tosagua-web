@@ -28,7 +28,12 @@ const canUpload = Boolean(order && ['PENDING_PAYMENT', 'UNDER_REVIEW'].includes(
       <p class="muted">Escriba el código que le dimos. Solo verá los pedidos de su cuenta.</p>
     </div>
 
-    <form class="card pad stack" method="POST" action={actions.trackOrder}>
+    <form
+      class="card pad stack"
+      method="POST"
+      action={actions.trackOrder}
+      data-autosubmit={prefillCode && !result && !queryError ? '' : undefined}
+    >
       <div class="fields">
         <div class="field">
           <label for="track-code">Código del pedido</label>
@@ -176,4 +181,10 @@ const canUpload = Boolean(order && ['PENDING_PAYMENT', 'UNDER_REVIEW'].includes(
       }
     }
   });
+</script>
+
+<script>
+  // Desde "Mi cuenta" el botón "Ver" trae el código en la URL: se consulta solo, sin otro clic.
+  const form = document.querySelector<HTMLFormElement>('form[data-autosubmit]');
+  if (form && form.querySelector<HTMLInputElement>('[name="code"]')?.value) form.requestSubmit();
 </script>

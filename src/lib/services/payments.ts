@@ -145,9 +145,34 @@ export async function latestPayment(orderId: string): Promise<Payment | null> {
   return (data as Payment | null) ?? null;
 }
 
-function safeExtension(name: string): string {
-  const ext = name.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '') ?? '';
-  return ext && ext.length <= 5 ? ext : 'jpg';
+interface ReceiptType {
+  mime: string;
+  ext: string;
+  /** La IA de visión solo recibe formatos de imagen comunes. */
+  readable: boolean;
+}
+
+const HEIF_BRANDS = ['heic', 'heix', 'hevc', 'hevx', 'heim', 'heis', 'mif1', 'msf1'];
+
+/** Detecta el tipo real por los primeros bytes: el tipo y el nombre que manda el navegador no son confiables. */
+export function detectReceiptType(bytes: Uint8Array): ReceiptType | null {
+  const ascii = (from: number, to: number) => String.fromCharCode(...bytes.subarray(from, to));
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return { mime: 'image/jpeg', ext: 'jpg', readable: true };
+  }
+  if (bytes.length >= 8 && bytes[0] === 0x89 && ascii(1, 4) === 'PNG') {
+    return { mime: 'image/png', ext: 'png', readable: true };
+  }
+  if (bytes.length >= 12 && ascii(0, 4) === 'RIFF' && ascii(8, 12) === 'WEBP') {
+    return { mime: 'image/webp', ext: 'webp', readable: true };
+  }
+  if (bytes.length >= 12 && ascii(4, 8) === 'ftyp' && HEIF_BRANDS.includes(ascii(8, 12))) {
+    return { mime: 'image/heic', ext: 'heic', readable: false };
+  }
+  if (bytes.length >= 5 && ascii(0, 5) === '%PDF-') {
+    return { mime: 'application/pdf', ext: 'pdf', readable: false };
+  }
+  return null;
 }
 
 export async function attachReceipt(
@@ -162,19 +187,20 @@ export async function attachReceipt(
   if (file.size === 0) throw new Error('El archivo está vacío.');
   if (file.size > 8 * 1024 * 1024) throw new Error('La foto es muy grande. Intente con una foto más liviana (máx. 8 MB).');
 
-  const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
-  if (!file.type.startsWith('image/') && !isPdf) {
-    throw new Error('Suba una foto o un PDF del comprobante.');
-  }
+  const buffer = new Uint8Array(await file.arrayBuffer());
+  const type = detectReceiptType(buffer);
+  if (!type) throw new Error('Suba una foto (JPG, PNG, WebP o HEIC) o un PDF del comprobante.');
 
-  const key = `${order.order_code}/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${safeExtension(file.name)}`;
-  const uploaded = await storage('receipts').upload(key, file);
+  // Se guarda con el tipo detectado, nunca con el que declaró el navegador.
+  const stored = new Blob([buffer], { type: type.mime });
+  const key = `${order.order_code}/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${type.ext}`;
+  const uploaded = await storage('receipts').upload(key, stored);
   if (uploaded.error) throw new Error(`No pudimos guardar la foto. ${describeDbError(uploaded.error)}`);
 
   let extracted: ExtractedReceipt | null = null;
-  if (!isPdf) {
+  if (type.readable) {
     try {
-      extracted = await extractReceipt(file);
+      extracted = await extractReceipt(stored);
     } catch (error) {
       console.warn('[receipt] Lectura automática falló:', error instanceof Error ? error.message : error);
     }

@@ -1,7 +1,7 @@
 [auth]
 allowed_redirect_urls = ["http://localhost:4321/api/auth/google/callback", "http://127.0.0.1:4321/api/auth/google/callback"]
-# Requiere SMTP configurado; la app ya tiene la pantalla de código.
-require_email_verification = true
+# Desactivada hasta configurar SMTP; la app ya tiene la pantalla de código (/cuenta/verificar).
+require_email_verification = false
 verify_email_method = "code"
 reset_password_method = "code"
 disable_signup = false

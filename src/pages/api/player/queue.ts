@@ -51,7 +51,7 @@ export const GET: APIRoute = async ({ request }) => {
     if (keys.length > 0) {
       const urls = await db().storage.from('audios').createSignedUrls(keys, 3600);
       for (const entry of urls.data ?? []) {
-        if (entry.signedUrl) signed.set(entry.path, entry.signedUrl);
+        if (entry.signedUrl && entry.path) signed.set(entry.path, entry.signedUrl);
       }
     }
 

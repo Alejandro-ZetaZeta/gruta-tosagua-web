@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { createInterface } from 'node:readline/promises';
-import { createAdminClient, createClient } from '@insforge/sdk';
+import { createClient } from '@supabase/supabase-js';
 
 function loadEnv() {
   const env = {};
@@ -24,31 +24,42 @@ try {
   )
     .trim()
     .toLowerCase();
-  // No se acepta por argumento: quedaría en el historial y en la lista de procesos.
+
   const password = await rl.question('Contraseña (mínimo 12 caracteres): ');
 
   if (!email || !email.includes('@')) throw new Error('Correo inválido.');
   if (password.length < 12) throw new Error('Use una contraseña de al menos 12 caracteres.');
 
-  const client = createClient({
-    baseUrl: env.INSFORGE_URL,
-    anonKey: env.INSFORGE_ANON_KEY,
-    isServerMode: true,
+  const supabaseUrl = env.SUPABASE_URL || env.INSFORGE_URL;
+  const anonKey = env.SUPABASE_ANON_KEY || env.INSFORGE_ANON_KEY;
+  const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SECRET_KEY || env.INSFORGE_API_KEY;
+
+  if (!supabaseUrl || !serviceKey) {
+    throw new Error('Falta SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY en .env.local.');
+  }
+
+  const client = createClient(supabaseUrl, anonKey || serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const { data, error } = await client.auth.signUp({ email, password, name: 'Encargada' });
+  const { data, error } = await client.auth.signUp({
+    email,
+    password,
+    options: { data: { name: 'Encargada' } },
+  });
+
   if (error) {
     if (/already|exists|registered/i.test(error.message)) {
       throw new Error('Esa cuenta ya existe. Use "npm run promote-admin" para darle acceso al panel.');
     }
     throw new Error(error.message);
   }
-  if (data?.requireEmailVerification) {
-    console.log('La cuenta se creó, pero el proyecto pide verificación por correo.');
-  }
 
-  const admin = createAdminClient({ baseUrl: env.INSFORGE_URL, apiKey: env.INSFORGE_API_KEY });
-  const promoted = await admin.database.rpc('set_user_role_by_email', {
+  const admin = createClient(supabaseUrl, serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  const promoted = await admin.rpc('set_user_role_by_email', {
     p_email: email,
     p_role: 'ADMIN',
   });

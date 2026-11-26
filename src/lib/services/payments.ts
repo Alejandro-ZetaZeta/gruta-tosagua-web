@@ -268,7 +268,7 @@ export async function signedUrls(
   const { data, error } = await storage(bucket).createSignedUrls(unique, expiresIn);
   if (error || !data) return map;
   for (const entry of data) {
-    if (entry.signedUrl) map.set(entry.path, entry.signedUrl);
+    if (entry.signedUrl && entry.path) map.set(entry.path, entry.signedUrl);
   }
   return map;
 }

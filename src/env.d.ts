@@ -9,9 +9,14 @@ declare namespace App {
 }
 
 interface ImportMetaEnv {
-  readonly INSFORGE_URL: string;
-  readonly INSFORGE_API_KEY: string;
-  readonly INSFORGE_ANON_KEY: string;
+  readonly SUPABASE_URL: string;
+  readonly SUPABASE_SERVICE_ROLE_KEY?: string;
+  readonly SUPABASE_SECRET_KEY?: string;
+  readonly SUPABASE_ANON_KEY?: string;
+  readonly SUPABASE_PUBLISHABLE_KEY?: string;
+  readonly INSFORGE_URL?: string;
+  readonly INSFORGE_API_KEY?: string;
+  readonly INSFORGE_ANON_KEY?: string;
   readonly PLAYER_TOKEN: string;
   readonly OPENROUTER_API_KEY?: string;
   readonly OPENROUTER_TEXT_MODEL?: string;

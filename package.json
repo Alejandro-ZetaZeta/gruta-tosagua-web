@@ -16,6 +16,7 @@
     "@astrojs/node": "^11.1.9",
     "@insforge/sdk": "^1.5.2",
     "@phosphor-icons/web": "^2.1.2",
+    "@supabase/supabase-js": "^2.119.2",
     "@tailwindcss/vite": "^4.3.3",
     "astro": "^7.4.4",
     "msedge-tts": "^2.1.1",
